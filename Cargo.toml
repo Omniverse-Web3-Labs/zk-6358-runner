@@ -1,0 +1,30 @@
+[package]
+name = "zk-6358-runner"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+plonky2 = { path = "../plonky2/plonky2" }               # https://github.com/xiyu1984/plonky2
+plonky2_ecdsa = {path = "../plonky2-ecdsa"}             # https://github.com/xiyu1984/plonky2-ecdsa
+plonky2_keccak256 = {path = "../plonky2-keccak256"}     # https://github.com/kay404/plonky2-keccak256/tree/xy-dev
+plonky2_u32 = {path = "../plonky2-u32"}                 # https://github.com/xiyu1984/plonky2-u32
+
+zk-6358-prover = { path = "../zk-omni-executor/zk-6358-prover"}     # https://github.com/Omniverse-Web3-Labs/zk-omni-executor/        # private currently
+circuit-local-storage ={ path = "../zk-omni-executor/circuit-local-storage"}
+exec-system = {path = "../zk-omni-executor/exec-system"}
+interact  ={ path = "../zk-omni-executor/interact"}
+crypto ={ path = "../zk-omni-executor/crypto"}
+
+fri-kzg-verifier = { path = "../fri-kzg-verifier"}
+
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = { version = "1.0" }
+itertools = { version = "0.11.0", default-features = false }
+anyhow = { version = "1.0.40", default-features = false }
+log = "0.4.14"
+colored = "2.0.0"
+
+tokio = { version = "1", features = ["full"] }
+rayon = "1.9.0"
