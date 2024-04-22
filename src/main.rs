@@ -9,7 +9,7 @@ use anyhow::Result;
 #[tokio::main]
 async fn main() -> Result<()> {
     exec_system::initiallize::sys_env_init("./.config/sys.config");
-    exec_system::initiallize::sys_log_init(Some(vec!["zk-6358-runner".to_string(), "zk_6358_prover".to_string(), "plonky2::util::timing".to_string(), "crypto".to_string(), "interact".to_string()]));
+    exec_system::initiallize::sys_log_init(Some(vec!["zk_6358_runner".to_string(), "zk_6358_prover".to_string(), "plonky2::util::timing".to_string(), "crypto".to_string(), "interact".to_string()]));
 
     let runtime_config = RuntimeConfig::from_env();
 
