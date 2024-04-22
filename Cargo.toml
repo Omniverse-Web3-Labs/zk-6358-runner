@@ -18,6 +18,7 @@ interact  ={ path = "../zk-omni-executor/interact"}
 crypto ={ path = "../zk-omni-executor/crypto"}
 
 fri-kzg-verifier = { path = "../fri-kzg-verifier"}
+halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v0.3.0" }
 
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0" }

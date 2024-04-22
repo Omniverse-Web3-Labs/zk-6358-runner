@@ -5,6 +5,11 @@ use circuit_local_storage::object_store::batch_serde::BatchRange;
 use circuit_local_storage::object_store::proof_object_store::FRIProofBatchStorage;
 use crypto::check_log2_strict;
 use exec_system::traits::EnvConfig;
+use fri_kzg_verifier::exec::fri_2_kzg_solidity::generate_kzg_proof;
+use fri_kzg_verifier::exec::kzg_setup::load_kzg_params;
+use halo2_proofs::poly::kzg::commitment::ParamsKZG;
+use halo2_proofs::halo2curves::bn256::Bn256;
+
 use interact::exec_data::remote_exec_db::RemoteExecDB;
 
 use anyhow::{anyhow, Result};
@@ -15,9 +20,7 @@ use log::info;
 
 use plonky2::fri::FriConfig;
 use plonky2::plonk::circuit_data::CircuitConfig;
-use plonky2::plonk::config::{AlgebraicHasher, GenericConfig};
-use plonky2::{hash::hash_types::RichField, plonk::config::Hasher};
-use plonky2::field::extension::Extendable;
+use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
 use plonky2_ecdsa::gadgets::recursive_proof::recursive_proof_2;
 
 use zk_6358_prover::circuit::state_prover::ZK6358StateProverEnv;
@@ -27,7 +30,6 @@ use zk_6358_prover::types::signed_tx_types::SignedOmniverseTx;
 use zk_6358_prover::exec::db_to_zk::ToSignedOmniverseTx;
 use zk_6358_prover::exec::runtime_types::{InitAsset, InitUTXO};
 
-
 // #[derive(Debug, Clone)]
 // pub struct BatchRecorder {
 //     pub next_batch_id: u64,
@@ -35,11 +37,16 @@ use zk_6358_prover::exec::runtime_types::{InitAsset, InitUTXO};
 // }
 
 const TESTNET_CHUNK_SIZE: usize = 4;
+const DEGREE_TESTNET: u32 = 20;
 
-pub struct TestnetExecutor<H: Hasher<F>, F: RichField + Extendable<D>, const D: usize>
-where H: Send, H: Sync
+const D: usize = 2;
+type C = PoseidonGoldilocksConfig;
+type F = <C as GenericConfig<D>>::F;
+type H = <C as GenericConfig<D>>::Hasher;
+
+pub struct TestnetExecutor
 {
-    // batch_recorder: BatchRecorder,
+    kzg_params: ParamsKZG<Bn256>,
 
     remote_db: RemoteExecDB,
     runtime_zk_prover: ZK6358StateProverEnv<H, F, D>,
@@ -48,8 +55,7 @@ where H: Send, H: Sync
     fri_proof_batch_store: FRIProofBatchStorage
 }
 
-impl<H: Hasher<F>, F: RichField + Extendable<D>, const D: usize> TestnetExecutor<H, F, D> 
-where H: Send, H: Sync
+impl TestnetExecutor
 {
     pub async fn new(os_bucket: &str) -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
@@ -58,7 +64,8 @@ where H: Send, H: Sync
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new("").await,
-            fri_proof_batch_store: FRIProofBatchStorage::new(os_bucket).await
+            fri_proof_batch_store: FRIProofBatchStorage::new(os_bucket).await,
+            kzg_params: load_kzg_params(DEGREE_TESTNET, true)
         }
     }
 
@@ -92,10 +99,7 @@ where H: Send, H: Sync
     }
 
     // execution functions
-    pub async fn circuit_exec<C: GenericConfig<D, F = F>>(&mut self, batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()>
-    where 
-        <C as GenericConfig<D>>::Hasher: AlgebraicHasher<F>,
-        C: serde::ser::Serialize,
+    pub async fn circuit_exec(&mut self, _batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()>
     {
         let mut rzp_branch = self.runtime_zk_prover.fork();
 
@@ -118,7 +122,7 @@ where H: Send, H: Sync
             recursive_proof_2::<F, C, C, D>(&vec![middle_proof], &high_rate_config, None)?;
 
         // generate kzg(final) proof
-        self.fri_proof_batch_store.put_batched_fri_proof(batch_range, final_proof).await?;
+        let (_kzg_proof, _instances) = generate_kzg_proof(final_proof, &self.kzg_params, Some("8-4s".to_owned()))?;
 
         // // remember to flush to db, or the local state will not be updated
         self.runtime_zk_prover.merge(rzp_branch);
@@ -127,10 +131,7 @@ where H: Send, H: Sync
         Ok(())
     }
     
-    pub async fn try_execute_one_batch<C: GenericConfig<D, F = F>>(&mut self, expected_batch_size: usize) -> Result<()> 
-    where 
-        <C as GenericConfig<D>>::Hasher: AlgebraicHasher<F>,
-        C: serde::ser::Serialize,
+    pub async fn try_execute_one_batch(&mut self, expected_batch_size: usize) -> Result<()> 
     {
         if !check_log2_strict(expected_batch_size as u128) {
             return Err(anyhow!(format!("the `expected_batch_size` is not a power of 2.").red().bold()));
@@ -140,7 +141,7 @@ where H: Send, H: Sync
             match self.prepare_txs(&db_tx_vec, expected_batch_size).await {
                 Ok((batch_range, batched_somtx_vec)) => {
                     info!("{}", format!("batch range: {:?}, and prepared {} signed transactions", batch_range, batched_somtx_vec.len()).bright_blue().bold());
-                    // self.circuit_exec::<C>(batch_range, &batched_somtx_vec).await?;
+                    self.circuit_exec(batch_range, &batched_somtx_vec).await?;
                     info!("{}", format!("batch {} fri proof succeed", self.fri_proof_batch_store.batch_config.next_batch_id - 1).green());
                     Ok(())
                 },

@@ -4103,6 +4103,7 @@ dependencies = [
  "crypto",
  "exec-system",
  "fri-kzg-verifier",
+ "halo2_proofs",
  "interact",
  "itertools 0.11.0",
  "log",
