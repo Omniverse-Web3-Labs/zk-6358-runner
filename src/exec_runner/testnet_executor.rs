@@ -2,7 +2,7 @@
 use std::fs;
 
 use circuit_local_storage::object_store::batch_serde::BatchRange;
-use circuit_local_storage::object_store::proof_object_store::FRIProofBatchStorage;
+use circuit_local_storage::object_store::proof_object_store::KZGProofBatchStorage;
 use crypto::check_log2_strict;
 use exec_system::traits::EnvConfig;
 use fri_kzg_verifier::exec::fri_2_kzg_solidity::generate_kzg_proof;
@@ -21,6 +21,7 @@ use log::info;
 use plonky2::fri::FriConfig;
 use plonky2::plonk::circuit_data::CircuitConfig;
 use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
+use plonky2::field::types::PrimeField64;
 use plonky2_ecdsa::gadgets::recursive_proof::recursive_proof_2;
 
 use zk_6358_prover::circuit::state_prover::ZK6358StateProverEnv;
@@ -29,6 +30,8 @@ use zk_6358_prover::types::signed_tx_types::SignedOmniverseTx;
 
 use zk_6358_prover::exec::db_to_zk::ToSignedOmniverseTx;
 use zk_6358_prover::exec::runtime_types::{InitAsset, InitUTXO};
+
+use super::sc_local_verifier::SCLocalVerifier;
 
 // #[derive(Debug, Clone)]
 // pub struct BatchRecorder {
@@ -52,7 +55,10 @@ pub struct TestnetExecutor
     runtime_zk_prover: ZK6358StateProverEnv<H, F, D>,
 
     // objective storage
-    fri_proof_batch_store: FRIProofBatchStorage
+    kzg_proof_batch_store: KZGProofBatchStorage,
+
+    // local verifier
+    local_verifier: SCLocalVerifier
 }
 
 impl TestnetExecutor
@@ -64,13 +70,14 @@ impl TestnetExecutor
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new("").await,
-            fri_proof_batch_store: FRIProofBatchStorage::new(os_bucket).await,
-            kzg_params: load_kzg_params(DEGREE_TESTNET, true)
+            kzg_proof_batch_store: KZGProofBatchStorage::new(os_bucket).await,
+            kzg_params: load_kzg_params(DEGREE_TESTNET, true),
+            local_verifier: SCLocalVerifier::new(&vec![4, 8, 16])
         }
     }
 
     fn is_beginning(&self) -> bool {
-        1 == self.fri_proof_batch_store.batch_config.next_tx_seq_id
+        1 == self.kzg_proof_batch_store.batch_config.next_tx_seq_id
     }
 
     // load executed batch id from objective storage
@@ -99,7 +106,7 @@ impl TestnetExecutor
     }
 
     // execution functions
-    pub async fn circuit_exec(&mut self, _batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()>
+    pub async fn circuit_exec(&mut self, batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()>
     {
         let mut rzp_branch = self.runtime_zk_prover.fork();
 
@@ -122,9 +129,17 @@ impl TestnetExecutor
             recursive_proof_2::<F, C, C, D>(&vec![middle_proof], &high_rate_config, None)?;
 
         // generate kzg(final) proof
-        let (_kzg_proof, _instances) = generate_kzg_proof(final_proof, &self.kzg_params, Some("8-4s".to_owned()))?;
+        info!("{}", format!("start aggregating fri proof to kzg").cyan());
+        let (proof, instances) = generate_kzg_proof(final_proof.clone(), &self.kzg_params, Some("4".to_owned()))?;
+        // let (proof, _instances) = generate_kzg_verifier(final_proof.clone(), DEGREE_TESTNET, &self.kzg_params, Some("4".to_owned()))?;
 
-        // // remember to flush to db, or the local state will not be updated
+        // verify proof from local smart comtract
+        self.local_verifier.verify_proof_locally_or_panic(&proof, &instances);
+
+        // Persistent storage
+        self.kzg_proof_batch_store.put_batched_kzg_proof(batch_range, (proof, final_proof.0.public_inputs.iter().map(|ins| { ins.to_canonical_u64().to_string() }).collect_vec())).await?;
+
+        // remember to flush to db, or the local state will not be updated
         self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
 
@@ -137,12 +152,12 @@ impl TestnetExecutor
             return Err(anyhow!(format!("the `expected_batch_size` is not a power of 2.").red().bold()));
         }
 
-        if let Some(db_tx_vec) = self.remote_db.get_executed_txs(self.fri_proof_batch_store.batch_config.next_tx_seq_id, expected_batch_size).await {
+        if let Some(db_tx_vec) = self.remote_db.get_executed_txs(self.kzg_proof_batch_store.batch_config.next_tx_seq_id, expected_batch_size).await {
             match self.prepare_txs(&db_tx_vec, expected_batch_size).await {
                 Ok((batch_range, batched_somtx_vec)) => {
                     info!("{}", format!("batch range: {:?}, and prepared {} signed transactions", batch_range, batched_somtx_vec.len()).bright_blue().bold());
                     self.circuit_exec(batch_range, &batched_somtx_vec).await?;
-                    info!("{}", format!("batch {} fri proof succeed", self.fri_proof_batch_store.batch_config.next_batch_id - 1).green());
+                    info!("{}", format!("batch {} fri proof succeed", self.kzg_proof_batch_store.batch_config.next_batch_id - 1).green());
                     Ok(())
                 },
                 Err(err) => {
@@ -171,7 +186,7 @@ impl TestnetExecutor
         let mut somtx_vec = Vec::with_capacity(prepare_len);
         for (i, ds_tx) in db_stored_txs[..prepare_len].iter().enumerate() {
             if let Some(tx_seq_id) = &ds_tx.id {
-                if (self.fri_proof_batch_store.batch_config.next_tx_seq_id + i as u128) != to_u128(tx_seq_id.clone()) {
+                if (self.kzg_proof_batch_store.batch_config.next_tx_seq_id + i as u128) != to_u128(tx_seq_id.clone()) {
                     return Err(anyhow!(format!("the sequence id of the transaction error!").red().bold()));
                 }
             }

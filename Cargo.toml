@@ -17,8 +17,10 @@ exec-system = {path = "../zk-omni-executor/exec-system"}
 interact  ={ path = "../zk-omni-executor/interact"}
 crypto ={ path = "../zk-omni-executor/crypto"}
 
-fri-kzg-verifier = { path = "../fri-kzg-verifier"}
+fri-kzg-verifier = { path = "../fri-kzg-verifier"}                      # https://github.com/Omniverse-Web3-Labs/fri-kzg-verifier/ 
 halo2_proofs = { git = "https://github.com/privacy-scaling-explorations/halo2", tag = "v0.3.0" }
+semaphore_aggregation ={ path = "../community/stark-verifier" }         # https://github.com/xiyu1984/stark-verifier
+halo2_solidity_verifier = {path="../community/halo2-solidity-verifier", features=["evm"]}       # https://github.com/xiyu1984/halo2-solidity-verifier
 
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = { version = "1.0" }

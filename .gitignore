@@ -3,3 +3,5 @@
 /object-store
 /test-data
 /snark-proof
+/generated-sc
+/.DS_Store
