@@ -4,6 +4,7 @@ use std::fs;
 use circuit_local_storage::object_store::batch_serde::BatchRange;
 use circuit_local_storage::object_store::proof_object_store::KZGProofBatchStorage;
 use crypto::check_log2_strict;
+use exec_system::runtime::RuntimeConfig;
 use exec_system::traits::EnvConfig;
 use fri_kzg_verifier::exec::fri_2_kzg_solidity::generate_kzg_proof;
 use fri_kzg_verifier::exec::kzg_setup::load_kzg_params;
@@ -219,4 +220,20 @@ impl TestnetExecutor
             end_tx_seq_id,
         }
     }
+}
+
+////////////////////////////////////////////////////////////////
+/// run testnet
+pub async fn run_testnet() -> Result<()> {
+    exec_system::initiallize::sys_env_init("./.config/sys.config");
+
+    let runtime_config = RuntimeConfig::from_env();
+
+    info!("{}", format!("start {}", runtime_config.network).green().bold());
+
+    let mut runtime_exec = TestnetExecutor::new("./object-store").await;
+    runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
+
+    runtime_exec.try_execute_one_batch(8).await?;
+    runtime_exec.try_execute_one_batch(4).await
 }

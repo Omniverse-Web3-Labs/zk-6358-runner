@@ -1,9 +1,19 @@
-use exec_system::{runtime::RuntimeConfig, traits::EnvConfig};
+use clap::{arg, Parser, builder::PossibleValuesParser};
 use log::info;
 
-use colored::Colorize;
-use zk_6358_runner::exec_runner::testnet_executor::TestnetExecutor;
 use anyhow::Result;
+use colored::Colorize;
+use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executor::run_proof_o_s_exec};
+// use zk_6358_runner::exec_runner::testnet_executor::run_testnet;
+
+#[derive(Parser, Debug)]
+pub struct Cli {
+    #[arg(short, long, 
+        default_value_t = String::from("testnet"),
+        value_parser = PossibleValuesParser::new(["testnet", "mainnet", "smt-db", "proof-db"])
+    )]
+    pub target: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,13 +27,24 @@ async fn main() -> Result<()> {
         "stark_verifier".to_string()
     ]));
 
-    let runtime_config = RuntimeConfig::from_env();
+    let cli_args = Cli::parse();
 
-    info!("{}", format!("start {}", runtime_config.network).green().bold());
+    match cli_args.target.as_str() {
+        "testnet" => {
+            // run_testnet().await?
+            info!("running testnet")
+        },
+        "mainnet" => {
+            todo!()
+        },
+        "smt-db" => {
+            run_db_exec().await;
+        },
+        "proof-db" => {
+            run_proof_o_s_exec().await;
+        },
+        _ => unreachable!("{}", format!("invalid target").red().bold())
+    }
 
-    let mut runtime_exec = TestnetExecutor::new("./object-store").await;
-    runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
-
-    runtime_exec.try_execute_one_batch(8).await?;
-    runtime_exec.try_execute_one_batch(4).await
+    Ok(())
 }

@@ -12,6 +12,7 @@ plonky2_keccak256 = {path = "../plonky2-keccak256"}     # https://github.com/kay
 plonky2_u32 = {path = "../plonky2-u32"}                 # https://github.com/xiyu1984/plonky2-u32
 
 zk-6358-prover = { path = "../zk-omni-executor/zk-6358-prover"}     # https://github.com/Omniverse-Web3-Labs/zk-omni-executor/        # private currently
+cached-smt-db ={ path = "../zk-omni-executor/cached-smt-db"}
 circuit-local-storage ={ path = "../zk-omni-executor/circuit-local-storage"}
 exec-system = {path = "../zk-omni-executor/exec-system"}
 interact  ={ path = "../zk-omni-executor/interact"}
@@ -28,6 +29,8 @@ itertools = { version = "0.11.0", default-features = false }
 anyhow = { version = "1.0.40", default-features = false }
 log = "0.4.14"
 colored = "2.0.0"
+clap ={ version = "4.5.4"}
+rustyline ={ version = "14.0.0"}
 
 tokio = { version = "1", features = ["full"] }
 rayon = "1.9.0"
