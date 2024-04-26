@@ -20,7 +20,8 @@ impl DBExecutor {
     }
 
     pub async fn reset_smt_kv(&self) -> Result<()> {
-        SMTKVLive::clear_all_data(&self.db_config.smt_kv).await
+        SMTKVLive::clear_all_data(&format!("{}/utxo", self.db_config.smt_kv)).await?;
+        SMTKVLive::clear_all_data(&format!("{}/asset", self.db_config.smt_kv)).await
     }
 }
 

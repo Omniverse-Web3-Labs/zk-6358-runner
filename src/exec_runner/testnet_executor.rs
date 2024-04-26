@@ -70,7 +70,7 @@ impl TestnetExecutor
         Self { 
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
-            runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_url).await,
+            runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
             kzg_proof_batch_store: KZGProofBatchStorage::new(os_bucket).await,
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
             local_verifier: SCLocalVerifier::new(&vec![4, 8, 16])
@@ -104,6 +104,12 @@ impl TestnetExecutor
         }
 
         Ok(())
+    }
+
+    pub async fn test_circuit_exec(&mut self, batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) {
+        let _parallel_state_cd_vec = self.runtime_zk_prover.build_chunked_state_transfer_data::<C>(batched_somtx_vec, 4).await;
+        self.kzg_proof_batch_store.put_batched_kzg_proof(batch_range, (vec![1,2,3,4], vec!["1234".to_string(), "1234".to_string(), "1234".to_string(), "1234".to_string()])).await.unwrap();
+        self.runtime_zk_prover.flush_state_after_final_verification().await;
     }
 
     // execution functions
@@ -157,7 +163,8 @@ impl TestnetExecutor
             match self.prepare_txs(&db_tx_vec, expected_batch_size).await {
                 Ok((batch_range, batched_somtx_vec)) => {
                     info!("{}", format!("batch range: {:?}, and prepared {} signed transactions", batch_range, batched_somtx_vec.len()).bright_blue().bold());
-                    self.circuit_exec(batch_range, &batched_somtx_vec).await?;
+                    // self.circuit_exec(batch_range, &batched_somtx_vec).await?;
+                    self.test_circuit_exec(batch_range, &batched_somtx_vec).await;
                     info!("{}", format!("batch {} fri proof succeed", self.kzg_proof_batch_store.batch_config.next_batch_id - 1).green());
                     Ok(())
                 },
@@ -234,6 +241,6 @@ pub async fn run_testnet() -> Result<()> {
     let mut runtime_exec = TestnetExecutor::new("./object-store").await;
     runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
 
-    // runtime_exec.try_execute_one_batch(8).await?;
+    runtime_exec.try_execute_one_batch(8).await?;
     runtime_exec.try_execute_one_batch(4).await
 }

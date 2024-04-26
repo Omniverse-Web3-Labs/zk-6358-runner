@@ -555,6 +555,7 @@ dependencies = [
  "colored",
  "exec-system",
  "hex",
+ "itertools 0.11.0",
  "log",
  "plonky2",
  "plonky2_ecdsa",
