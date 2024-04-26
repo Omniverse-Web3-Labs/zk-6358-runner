@@ -1,4 +1,4 @@
-use cached_smt_db::db::db_live::SMTDBLive;
+use cached_smt_db::db::{db_live::SMTDBLive, kv_rocks::SMTKVLive, smt_cached_types::DBLiveTraits};
 use exec_system::{database::DatabaseConfig, traits::EnvConfig};
 
 use anyhow::Result;
@@ -15,19 +15,19 @@ impl DBExecutor {
         }
     }
 
-    pub async fn reset_smt_db(&self) -> Result<()>{
-        let mut smt_db_live = SMTDBLive::new(&self.db_config.smt_url).await;
+    pub async fn reset_smt_db(&self) -> Result<()> {
+        SMTDBLive::clear_all_data(&self.db_config.smt_url).await
+    }
 
-        smt_db_live.clear_all_data().await?;
-
-        Ok(())
+    pub async fn reset_smt_kv(&self) -> Result<()> {
+        SMTKVLive::clear_all_data(&self.db_config.smt_kv).await
     }
 }
 
 pub async fn run_db_exec() {
     let mut rl = rustyline::DefaultEditor::new().unwrap();
 
-    let dbline = rl.readline(">>input db type(`smt-db`|`remote-db`): ").unwrap();
+    let dbline = rl.readline(">>input db type(`smt-db`|`remote-db`|`smt-kv`): ").unwrap();
     // match readline {
     //     Ok(line) => {
     //         rl.add_history_entry(line.as_str()).unwrap();
@@ -56,6 +56,17 @@ pub async fn run_db_exec() {
                 _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
             }
         },
+        "smt-kv" => {
+            let db_exec = DBExecutor::new();
+
+            let op_line = rl.readline(">>input operation type(`reset`): ").unwrap();
+            match op_line.as_str() {
+                "reset" => {
+                    db_exec.reset_smt_kv().await.unwrap();
+                },
+                _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
+            }
+        }
         _=> { panic!("{}", format!("invalid db type {dbline}. expcted `smt-db` or `remote-db`").red().bold()); }
     }
 }

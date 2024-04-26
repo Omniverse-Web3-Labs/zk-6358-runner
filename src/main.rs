@@ -1,9 +1,9 @@
 use clap::{arg, Parser, builder::PossibleValuesParser};
-use log::info;
+// use log::info;
 
 use anyhow::Result;
 use colored::Colorize;
-use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executor::run_proof_o_s_exec};
+use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executor::run_proof_o_s_exec, testnet_executor::run_testnet};
 // use zk_6358_runner::exec_runner::testnet_executor::run_testnet;
 
 #[derive(Parser, Debug)]
@@ -20,6 +20,7 @@ async fn main() -> Result<()> {
     exec_system::initiallize::sys_env_init("./.config/sys.config");
     exec_system::initiallize::sys_log_init(Some(vec!["zk_6358_runner".to_string(), 
         "zk_6358_prover".to_string(), 
+        "cached_smt_db".to_string(),
         "plonky2::util::timing".to_string(), 
         "crypto".to_string(), 
         "interact".to_string(),
@@ -31,8 +32,8 @@ async fn main() -> Result<()> {
 
     match cli_args.target.as_str() {
         "testnet" => {
-            // run_testnet().await?
-            info!("running testnet")
+            run_testnet().await?
+            // info!("running testnet")
         },
         "mainnet" => {
             todo!()
