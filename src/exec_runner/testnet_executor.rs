@@ -67,6 +67,8 @@ impl TestnetExecutor
     pub async fn new(os_bucket: &str) -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
 
+        info!("{:?}", db_config.smt_kv);
+
         Self { 
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
@@ -163,8 +165,8 @@ impl TestnetExecutor
             match self.prepare_txs(&db_tx_vec, expected_batch_size).await {
                 Ok((batch_range, batched_somtx_vec)) => {
                     info!("{}", format!("batch range: {:?}, and prepared {} signed transactions", batch_range, batched_somtx_vec.len()).bright_blue().bold());
-                    // self.circuit_exec(batch_range, &batched_somtx_vec).await?;
-                    self.test_circuit_exec(batch_range, &batched_somtx_vec).await;
+                    self.circuit_exec(batch_range, &batched_somtx_vec).await?;
+                    // self.test_circuit_exec(batch_range, &batched_somtx_vec).await;
                     info!("{}", format!("batch {} fri proof succeed", self.kzg_proof_batch_store.batch_config.next_batch_id - 1).green());
                     Ok(())
                 },
@@ -241,6 +243,7 @@ pub async fn run_testnet() -> Result<()> {
     let mut runtime_exec = TestnetExecutor::new("./object-store").await;
     runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
 
-    runtime_exec.try_execute_one_batch(8).await?;
-    runtime_exec.try_execute_one_batch(4).await
+    // runtime_exec.try_execute_one_batch(4).await?;
+    // runtime_exec.try_execute_one_batch(8).await?;
+    runtime_exec.try_execute_one_batch(8).await
 }
