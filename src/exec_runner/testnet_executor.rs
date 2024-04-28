@@ -64,16 +64,18 @@ pub struct TestnetExecutor
 
 impl TestnetExecutor
 {
-    pub async fn new(os_bucket: &str) -> Self {
+    pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
+        let o_s_url_config = exec_system::database::ObjectStoreUrlConfig::from_env();
 
         info!("{:?}", db_config.smt_kv);
+        info!("{:?}", o_s_url_config);
 
         Self { 
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
-            kzg_proof_batch_store: KZGProofBatchStorage::new(os_bucket).await,
+            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config.remote_url).await,
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
             local_verifier: SCLocalVerifier::new(&vec![4, 8, 16])
         }
@@ -240,7 +242,7 @@ pub async fn run_testnet() -> Result<()> {
 
     info!("{}", format!("start {}", runtime_config.network).green().bold());
 
-    let mut runtime_exec = TestnetExecutor::new("./object-store").await;
+    let mut runtime_exec = TestnetExecutor::new().await;
     runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
 
     // runtime_exec.try_execute_one_batch(4).await?;

@@ -16,8 +16,15 @@ impl ObjectStorageExec {
         Self { o_s_config }
     }
 
-    pub async fn reset_kzg_store(&self) -> Result<()> {
+    pub async fn reset_kzg_store_local(&self) -> Result<()> {
         let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config.local_file).await;
+        kzg_batch_o_s.reset_kzg_store().await?;
+
+        Ok(())
+    }
+
+    pub async fn reset_kzg_store_remote(&self) -> Result<()> {
+        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config.remote_url).await;
         kzg_batch_o_s.reset_kzg_store().await?;
 
         Ok(())
@@ -35,13 +42,21 @@ pub async fn run_proof_o_s_exec() {
             let op_line = rl.readline(">>input operation type(`reset`): ").unwrap();
             match op_line.as_str() {
                 "reset" => {
-                    o_s_exec.reset_kzg_store().await.unwrap();
+                    o_s_exec.reset_kzg_store_local().await.unwrap();
                 },
                 _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
             }
         },
         "remote" => {
-            todo!();
+            let o_s_exec = ObjectStorageExec::new();
+
+            let op_line = rl.readline(">>input operation type(`reset`): ").unwrap();
+            match op_line.as_str() {
+                "reset" => {
+                    o_s_exec.reset_kzg_store_remote().await.unwrap();
+                },
+                _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
+            }
         },
         _ => { panic!("{}", format!("invalid bucket type {o_s_line}. expected `local` or `remote`").red().bold()) }
     }
