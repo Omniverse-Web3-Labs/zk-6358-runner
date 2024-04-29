@@ -25,6 +25,7 @@ use plonky2::plonk::config::{GenericConfig, PoseidonGoldilocksConfig};
 use plonky2::field::types::PrimeField64;
 use plonky2_ecdsa::gadgets::recursive_proof::recursive_proof_2;
 
+use tokio::time::{sleep, Duration};
 use zk_6358_prover::circuit::state_prover::ZK6358StateProverEnv;
 use zk_6358_prover::circuit::parallel_runtime::ParallelRuntimeCircuitEnv;
 use zk_6358_prover::types::signed_tx_types::SignedOmniverseTx;
@@ -235,7 +236,7 @@ impl TestnetExecutor
 
 ////////////////////////////////////////////////////////////////
 /// run testnet
-pub async fn run_testnet() -> Result<()> {
+pub async fn run_testnet() {
     exec_system::initiallize::sys_env_init("./.config/sys.config");
 
     let runtime_config = RuntimeConfig::from_env();
@@ -245,7 +246,12 @@ pub async fn run_testnet() -> Result<()> {
     let mut runtime_exec = TestnetExecutor::new().await;
     runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
 
-    // runtime_exec.try_execute_one_batch(4).await?;
-    // runtime_exec.try_execute_one_batch(8).await?;
-    runtime_exec.try_execute_one_batch(8).await
+    loop {
+        match runtime_exec.try_execute_one_batch(16).await {
+            Ok(_) => {},
+            Err(err) => { info!("{}", format!("{}", err).red().bold()); }
+        }
+
+        sleep(Duration::from_secs(60)).await;
+    }    
 }

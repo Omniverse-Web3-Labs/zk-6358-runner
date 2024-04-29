@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
 
     match cli_args.target.as_str() {
         "testnet" => {
-            run_testnet().await?
+            run_testnet().await;
             // info!("running testnet")
         },
         "mainnet" => {
