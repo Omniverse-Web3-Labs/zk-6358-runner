@@ -17,6 +17,10 @@ rustup override set nightly
 - `apt install pkg-config`
 - `apt-get install libssl-dev`
 - `apt-get install libclang-dev`
+- install `solc`
+    - `sudo add-apt-repository ppa:ethereum/ethereum`
+    - `sudo apt-get update`
+    - `sudo apt-get install solc`
 
 
 - Update `ahash` if using the latest `rustup` version (above `1.76.*`)
@@ -29,3 +33,17 @@ rustup override set nightly
     ```
 
 ### Exec
+
+- run in backend
+
+    ```sh
+
+    ./target/release/zk-6358-runner > ./zk-running.log 2>&1 &
+
+    # check id
+    jobs -l
+
+    # check log
+    tail -n 100 ./zk-running.log
+
+    ```
