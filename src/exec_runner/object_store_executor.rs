@@ -17,14 +17,16 @@ impl ObjectStorageExec {
     }
 
     pub async fn reset_kzg_store_local(&self) -> Result<()> {
-        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config.local_file).await;
+        let mut obj_store_url = self.o_s_config.clone();
+        obj_store_url.remote_url = "unavailable".to_string();
+        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config).await;
         kzg_batch_o_s.reset_kzg_store().await?;
 
         Ok(())
     }
 
     pub async fn reset_kzg_store_remote(&self) -> Result<()> {
-        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config.remote_url).await;
+        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config).await;
         kzg_batch_o_s.reset_kzg_store().await?;
 
         Ok(())

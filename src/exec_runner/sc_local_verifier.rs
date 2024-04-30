@@ -32,6 +32,21 @@ impl SCLocalVerifier {
         Self { verifier_address, vk_address_map, evm }
     }
 
+    pub fn check_vk(&self, vk_tx_num: &usize) -> bool {
+        self.vk_address_map.contains_key(vk_tx_num)
+    }
+
+    pub fn add_vk_address(&mut self, vk_tx_num: &usize) {
+        if self.vk_address_map.contains_key(vk_tx_num) {
+            return;
+        } else {
+            let vk_solidity = std_ops::load_solidity(format!("{vk_tx_num}_vk.sol")).expect(&format!("load vk {vk_tx_num} error").red());
+            let vk_code = compile_solidity(&vk_solidity);
+            let vk_address = self.evm.create(vk_code);
+            self.vk_address_map.insert(*vk_tx_num, vk_address);
+        }
+    }
+
     pub fn verify_proof_locally_or_panic(&mut self, proof: &Vec<u8>, instances: &Vec<Fr>) {
         assert!(instances.len() % 4 == 0);
         let tx_num = instances.len() / 4 - 5;

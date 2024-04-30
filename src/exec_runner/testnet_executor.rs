@@ -6,7 +6,7 @@ use circuit_local_storage::object_store::proof_object_store::KZGProofBatchStorag
 use crypto::check_log2_strict;
 use exec_system::runtime::RuntimeConfig;
 use exec_system::traits::EnvConfig;
-use fri_kzg_verifier::exec::fri_2_kzg_solidity::generate_kzg_proof;
+use fri_kzg_verifier::exec::fri_2_kzg_solidity::{generate_kzg_proof, generate_kzg_verifier};
 use fri_kzg_verifier::exec::kzg_setup::load_kzg_params;
 use halo2_proofs::poly::kzg::commitment::ParamsKZG;
 use halo2_proofs::halo2curves::bn256::Bn256;
@@ -76,7 +76,7 @@ impl TestnetExecutor
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
-            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config.remote_url).await,
+            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config).await,
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
             local_verifier: SCLocalVerifier::new(&vec![4, 8, 16])
         }
@@ -142,8 +142,16 @@ impl TestnetExecutor
 
         // generate kzg(final) proof
         info!("{}", format!("start aggregating fri proof to kzg").cyan());
-        let (proof, instances) = generate_kzg_proof(final_proof.clone(), &self.kzg_params, Some("4".to_owned()))?;
+        // let (proof, instances) = generate_kzg_proof(final_proof.clone(), &self.kzg_params, None)?;
         // let (proof, _instances) = generate_kzg_verifier(final_proof.clone(), DEGREE_TESTNET, &self.kzg_params, Some("4".to_owned()))?;
+        let batch_tx_num = batched_somtx_vec.len();
+        let (proof, instances) = if self.local_verifier.check_vk(&batch_tx_num) {
+            generate_kzg_proof(final_proof.clone(), &self.kzg_params, None)?
+        } else {
+            let (proof, instances) = generate_kzg_verifier(final_proof.clone(), DEGREE_TESTNET, &self.kzg_params, Some(batch_tx_num.to_string()))?;
+            self.local_verifier.add_vk_address(&batch_tx_num);
+            (proof, instances)
+        };
 
         // verify proof from local smart comtract
         self.local_verifier.verify_proof_locally_or_panic(&proof, &instances);

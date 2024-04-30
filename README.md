@@ -1,8 +1,8 @@
-# ZK-Omni-Executor
+# ZK-6358-Runner
 
 ## Note
 
-This project is under development and it depends on the lib `zk-6358`, which has not beed open-sourced. 
+This project depends on the lib `zk-6358` and `zk-omni-executor`, both of which are not been open-sourced. 
 
 ## Prepare
 
