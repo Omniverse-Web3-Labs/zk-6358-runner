@@ -42,6 +42,7 @@ rustup override set nightly
 
     # check id
     jobs -l
+    ps -ef|grep zk-6358-runner
 
     # check log
     tail -n 100 ./zk-running.log
