@@ -255,6 +255,7 @@ pub async fn run_testnet() {
     runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
 
     loop {
+        info!("processing at: {}", chrono::offset::Local::now());
         match runtime_exec.try_execute_one_batch(16).await {
             Ok(_) => {},
             Err(err) => { info!("{}", format!("{}", err).red().bold()); }

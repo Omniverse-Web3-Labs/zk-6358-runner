@@ -4356,6 +4356,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cached-smt-db",
+ "chrono",
  "circuit-local-storage",
  "clap",
  "colored",
