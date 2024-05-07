@@ -120,9 +120,9 @@ impl TestnetExecutor
     // execution functions
     pub async fn circuit_exec(&mut self, batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()>
     {
-        // let mut rzp_branch = self.runtime_zk_prover.fork();
+        let mut rzp_branch = self.runtime_zk_prover.fork();
 
-        let middle_proof = self.runtime_zk_prover
+        let middle_proof = rzp_branch
             .parallel_runtime_prove::<C>(batched_somtx_vec)
             .await?;
 
@@ -160,7 +160,7 @@ impl TestnetExecutor
         self.kzg_proof_batch_store.put_batched_kzg_proof(batch_range, (proof, final_proof.0.public_inputs.iter().map(|ins| { ins.to_canonical_u64().to_string() }).collect_vec())).await?;
 
         // remember to flush to db, or the local state will not be updated
-        // self.runtime_zk_prover.merge(rzp_branch);
+        self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
 
         Ok(())
@@ -258,7 +258,7 @@ pub async fn run_testnet() {
 
     loop {
         info!("processing at: {}", chrono::offset::Local::now());
-        match runtime_exec.try_execute_one_batch(32).await {
+        match runtime_exec.try_execute_one_batch(16).await {
             Ok(_) => {},
             Err(err) => { info!("{}", format!("{}", err).red().bold()); break; }
         }
