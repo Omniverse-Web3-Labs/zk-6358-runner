@@ -245,8 +245,8 @@ impl TestnetExecutor
 ////////////////////////////////////////////////////////////////
 /// run testnet
 pub async fn run_testnet() {
-    rayon::ThreadPoolBuilder::new().num_threads(12).build_global().unwrap();
-    
+    rayon::ThreadPoolBuilder::new().num_threads(8).build_global().unwrap();
+
     exec_system::initiallize::sys_env_init("./.config/sys.config");
 
     let runtime_config = RuntimeConfig::from_env();
