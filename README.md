@@ -48,3 +48,17 @@ rustup override set nightly
     tail -n 100 ./zk-running.log
 
     ```
+
+### Env
+
+- config swap
+    - `/etc/sysctl.config`
+        - `vm.swappiness = 30`
+        - `sysctl -p`
+    - swapon
+        - `fallocate -l 32G /mnt/swap`
+        - `chmod 0600 /mnt/swap`
+        - `mkswap /mnt/swap`
+        - `swapon /mnt/swap`
+    - reset
+        - `swapoff -a`
