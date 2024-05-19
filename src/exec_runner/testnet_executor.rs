@@ -259,10 +259,8 @@ pub async fn run_testnet() {
     loop {
         info!("processing at: {}", chrono::offset::Local::now());
         match runtime_exec.try_execute_one_batch(32).await {
-            Ok(_) => {},
-            Err(err) => { info!("{}", format!("{}", err).red().bold()); break; }
+            Ok(_) => { sleep(Duration::from_secs(60)).await; },
+            Err(err) => { info!("{}", format!("{}", err).red().bold()); sleep(Duration::from_secs(600)).await; }
         }
-
-        sleep(Duration::from_secs(60)).await;
     }    
 }
