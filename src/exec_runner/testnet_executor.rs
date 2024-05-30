@@ -33,6 +33,8 @@ use zk_6358_prover::types::signed_tx_types::SignedOmniverseTx;
 use zk_6358_prover::exec::db_to_zk::ToSignedOmniverseTx;
 use zk_6358_prover::exec::runtime_types::{InitAsset, InitUTXO};
 
+use crate::exec_runner::sync_executor::SyncExecutor;
+
 use super::sc_local_verifier::SCLocalVerifier;
 
 // #[derive(Debug, Clone)]
@@ -43,6 +45,8 @@ use super::sc_local_verifier::SCLocalVerifier;
 
 const TESTNET_CHUNK_SIZE: usize = 4;
 const DEGREE_TESTNET: u32 = 20;
+
+const TN_KZG_BATCH_PATH: &str = "kzg-proof-20240430/";
 
 const D: usize = 2;
 type C = PoseidonGoldilocksConfig;
@@ -76,9 +80,9 @@ impl TestnetExecutor
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
-            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config).await,
+            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config, TN_KZG_BATCH_PATH.to_string()).await,
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
-            local_verifier: SCLocalVerifier::new(&vec![4, 8, 16])
+            local_verifier: SCLocalVerifier::new(&vec![4, 8, 16, 32])
         }
     }
 
@@ -112,7 +116,7 @@ impl TestnetExecutor
     }
 
     pub async fn test_circuit_exec(&mut self, batch_range: BatchRange, batched_somtx_vec: &Vec<SignedOmniverseTx>) {
-        let _parallel_state_cd_vec = self.runtime_zk_prover.build_chunked_state_transfer_data::<C>(batched_somtx_vec, 4).await;
+        let _parallel_state_cd_vec = self.runtime_zk_prover.build_chunked_state_transfer_data::<C>(batched_somtx_vec, TESTNET_CHUNK_SIZE).await;
         self.kzg_proof_batch_store.put_batched_kzg_proof(batch_range, (vec![1,2,3,4], vec!["1234".to_string(), "1234".to_string(), "1234".to_string(), "1234".to_string()])).await.unwrap();
         self.runtime_zk_prover.flush_state_after_final_verification().await;
     }
@@ -175,7 +179,7 @@ impl TestnetExecutor
         if let Some(db_tx_vec) = self.remote_db.get_executed_txs(self.kzg_proof_batch_store.batch_config.next_tx_seq_id, expected_batch_size).await {
             match self.prepare_txs(&db_tx_vec, expected_batch_size).await {
                 Ok((batch_range, batched_somtx_vec)) => {
-                    info!("{}", format!("batch range: {:?}, and prepared {} signed transactions", batch_range, batched_somtx_vec.len()).bright_blue().bold());
+                    info!("{}", format!("batch range: {:?}, and prepared {} signed transactions. from tx seq {}", batch_range, batched_somtx_vec.len(), self.kzg_proof_batch_store.batch_config.next_tx_seq_id).bright_blue().bold());
                     self.circuit_exec(batch_range, &batched_somtx_vec).await?;
                     // self.test_circuit_exec(batch_range, &batched_somtx_vec).await;
                     info!("{}", format!("batch {} fri proof succeed", self.kzg_proof_batch_store.batch_config.next_batch_id - 1).green());
@@ -263,4 +267,25 @@ pub async fn run_testnet() {
             Err(err) => { info!("{}", format!("{}", err).red().bold()); sleep(Duration::from_secs(600)).await; }
         }
     }    
+}
+
+////////////////////////////////////////////////////////////////
+/// run sync
+pub async fn run_sync_testnet() {
+    // rayon::ThreadPoolBuilder::new().num_threads(8).build_global().unwrap();
+
+    exec_system::initiallize::sys_env_init("./.config/sys.config");
+
+    let runtime_config = RuntimeConfig::from_env();
+
+    info!("{}", format!("start {}", runtime_config.network).green().bold());
+
+    let mut runtime_exec = SyncExecutor::<H, F, D>::new(TN_KZG_BATCH_PATH.to_string()).await;
+    runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
+
+    info!("start syncing at: {}", chrono::offset::Local::now());
+    match runtime_exec.synchronize_node::<C>().await {
+        Ok(_) => {  },
+        Err(err) => { info!("{}", format!("{}", err).red().bold()); }
+    }  
 }
