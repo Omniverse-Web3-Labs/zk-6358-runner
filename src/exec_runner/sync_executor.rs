@@ -112,8 +112,10 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> S
         let mut next_tx_seq = 1u128;
 
         while next_tx_seq < end_tx_seq {
-            if let Some(db_tx_vec) = self.remote_db.get_executed_txs(next_tx_seq, NUM_SYNC_ONCE).await {
-                match prepare_txs(next_tx_seq, &db_tx_vec, NUM_SYNC_ONCE, 4) {
+            let tx_nun_sync_once = std::cmp::min((end_tx_seq - next_tx_seq) as usize, NUM_SYNC_ONCE);
+
+            if let Some(db_tx_vec) = self.remote_db.get_executed_txs(next_tx_seq, tx_nun_sync_once).await {
+                match prepare_txs(next_tx_seq, &db_tx_vec, tx_nun_sync_once, 4) {
                     Ok(batched_somtx_vec) => {
                         info!("{}", format!("prepared {} signed transactions. from tx seq {}", batched_somtx_vec.len(), next_tx_seq).bright_blue().bold());
                         self.sync_one_batch::<C>(&batched_somtx_vec).await;

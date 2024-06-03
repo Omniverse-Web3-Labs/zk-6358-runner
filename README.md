@@ -39,6 +39,9 @@ rustup override set nightly
 
 ### Exec
 
+- synchronize the proved transactions if running in a new environment
+    - `./target/release/zk-6358-runner --target synctestnet`
+
 - run in backend
 
     ```sh
