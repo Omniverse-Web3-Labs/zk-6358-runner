@@ -14,9 +14,10 @@ rustup override set nightly
 
 ### Environment
 
-- `apt install pkg-config`
-- `apt-get install libssl-dev`
-- `apt-get install libclang-dev`
+- `sudo apt install pkg-config`
+- `sudo apt-get install libssl-dev`
+- `sudo apt-get install libclang-dev`
+- `sudo apt install build-essential`
 - install `solc`
     - `sudo add-apt-repository ppa:ethereum/ethereum`
     - `sudo apt-get update`
@@ -31,6 +32,10 @@ rustup override set nightly
     cargo update ahash@0.7
 
     ```
+
+### Compile
+
+- add `.env` to `../zk-omni-executor/interact` and set the `DATABASE_URL=`  
 
 ### Exec
 
