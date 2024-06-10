@@ -42,6 +42,8 @@ rustup override set nightly
 - synchronize the proved transactions if running in a new environment
     - `./target/release/zk-6358-runner --target synctestnet`
 
+- prepare the `equip_kzg_bn254_20.srs`
+
 - run in backend
 
     ```sh
