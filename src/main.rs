@@ -3,14 +3,14 @@ use clap::{arg, Parser, builder::PossibleValuesParser};
 
 use anyhow::Result;
 use colored::Colorize;
-use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executor::run_proof_o_s_exec, testnet_executor::run_testnet};
+use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executor::run_proof_o_s_exec, testnet_executor::{run_sync_testnet, run_testnet}};
 // use zk_6358_runner::exec_runner::testnet_executor::run_testnet;
 
 #[derive(Parser, Debug)]
 pub struct Cli {
     #[arg(short, long, 
         default_value_t = String::from("testnet"),
-        value_parser = PossibleValuesParser::new(["testnet", "mainnet", "smt", "proof-db"])
+        value_parser = PossibleValuesParser::new(["testnet", "synctestnet", "mainnet", "smt", "proof-db"])
     )]
     pub target: String,
 }
@@ -34,6 +34,9 @@ async fn main() -> Result<()> {
         "testnet" => {
             run_testnet().await;
             // info!("running testnet")
+        },
+        "synctestnet" => {
+            run_sync_testnet().await;
         },
         "mainnet" => {
             todo!()

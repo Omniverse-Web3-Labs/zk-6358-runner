@@ -16,17 +16,17 @@ impl ObjectStorageExec {
         Self { o_s_config }
     }
 
-    pub async fn reset_kzg_store_local(&self) -> Result<()> {
+    pub async fn reset_kzg_store_local(&self, kzg_batch_path: String) -> Result<()> {
         let mut obj_store_url = self.o_s_config.clone();
         obj_store_url.remote_url = "unavailable".to_string();
-        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config).await;
+        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config, kzg_batch_path).await;
         kzg_batch_o_s.reset_kzg_store().await?;
 
         Ok(())
     }
 
-    pub async fn reset_kzg_store_remote(&self) -> Result<()> {
-        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config).await;
+    pub async fn reset_kzg_store_remote(&self, kzg_batch_path: String) -> Result<()> {
+        let mut kzg_batch_o_s = KZGProofBatchStorage::new(&self.o_s_config, kzg_batch_path).await;
         kzg_batch_o_s.reset_kzg_store().await?;
 
         Ok(())
@@ -44,7 +44,8 @@ pub async fn run_proof_o_s_exec() {
             let op_line = rl.readline(">>input operation type(`reset`): ").unwrap();
             match op_line.as_str() {
                 "reset" => {
-                    o_s_exec.reset_kzg_store_local().await.unwrap();
+                    let kzg_batch_path = rl.readline(">>input kzg proof path: ").unwrap();
+                    o_s_exec.reset_kzg_store_local(kzg_batch_path).await.unwrap();
                 },
                 _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
             }
@@ -55,7 +56,8 @@ pub async fn run_proof_o_s_exec() {
             let op_line = rl.readline(">>input operation type(`reset`): ").unwrap();
             match op_line.as_str() {
                 "reset" => {
-                    o_s_exec.reset_kzg_store_remote().await.unwrap();
+                    let kzg_batch_path = rl.readline(">>input kzg proof path: ").unwrap();
+                    o_s_exec.reset_kzg_store_remote(kzg_batch_path).await.unwrap();
                 },
                 _ => { panic!("{}", format!("invalid op type {op_line}. expected `reset`").red().bold()); }
             }
