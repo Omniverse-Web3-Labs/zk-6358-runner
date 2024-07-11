@@ -10,7 +10,7 @@ use zk_6358_runner::exec_runner::{db_executor::run_db_exec, object_store_executo
 pub struct Cli {
     #[arg(short, long, 
         default_value_t = String::from("testnet"),
-        value_parser = PossibleValuesParser::new(["testnet", "synctestnet", "mainnet", "smt", "proof-db"])
+        value_parser = PossibleValuesParser::new(["testnet", "synctestnet", "mainnet", "smt", "proof-db", "mock-test"])
     )]
     pub target: String,
 }
@@ -46,6 +46,13 @@ async fn main() -> Result<()> {
         },
         "proof-db" => {
             run_proof_o_s_exec().await;
+        },
+        "mock-test" => {
+            if cfg!(feature = "mocktest") {
+
+            } else {
+                panic!("{}", format!("`mocktest` is not enabled").red().bold())
+            }
         },
         _ => unreachable!("{}", format!("invalid target. expected: `testnet`, `mainnet`, `smt`, or `proof-db`").red().bold())
     }
