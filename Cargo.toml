@@ -11,6 +11,7 @@ plonky2_ecdsa = {path = "../plonky2-ecdsa"}             # https://github.com/xiy
 plonky2_keccak256 = {path = "../plonky2-keccak256"}     # https://github.com/kay404/plonky2-keccak256/tree/xy-dev
 plonky2_u32 = {path = "../plonky2-u32"}                 # https://github.com/xiyu1984/plonky2-u32
 
+zk-6358 = { path = "../zk-6358" }                    # https://github.com/Omniverse-Web3-Labs/zk-6358/        # private currently
 zk-6358-prover = { path = "../zk-omni-executor/zk-6358-prover"}     # https://github.com/Omniverse-Web3-Labs/zk-omni-executor/        # private currently
 cached-smt-db ={ path = "../zk-omni-executor/cached-smt-db"}
 circuit-local-storage ={ path = "../zk-omni-executor/circuit-local-storage"}
@@ -32,9 +33,12 @@ colored = "2.0.0"
 clap ={ version = "4.5.4"}
 rustyline ={ version = "14.0.0"}
 chrono = { version = "0.4"}
+num = { version = "= 0.4.3", default-features = false }
+rand = { version = "0.8.5", default-features = false }
 
 tokio = { version = "1" }
 rayon = "1.9.0"
+
 
 [features]
 mocktest = []

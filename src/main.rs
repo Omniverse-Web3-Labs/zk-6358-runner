@@ -49,7 +49,11 @@ async fn main() -> Result<()> {
         },
         "mock-test" => {
             if cfg!(feature = "mocktest") {
-
+                #[cfg(feature = "mocktest")]
+                {
+                    use zk_6358_runner::exec_runner::cosp1_tn_executor::state_only_mocking;
+                    state_only_mocking().await;
+                }
             } else {
                 panic!("{}", format!("`mocktest` is not enabled").red().bold())
             }
