@@ -94,10 +94,12 @@ pub async fn state_only_mocking() {
         y_le_bytes.append(&mut i.to_le_bytes().to_vec());
     });
 
-    let mut rl = rustyline::DefaultEditor::new().unwrap();
+    // let mut rl = rustyline::DefaultEditor::new().unwrap();
 
-    let o_s_line = rl.readline(">>input batch count(one batch 4 txs): ").unwrap();
-    let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
+    // let o_s_line = rl.readline(">>input batch count(one batch 4 txs): ").unwrap();
+    // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
+
+    let tx_n = 32;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n).for_each(|_| {
