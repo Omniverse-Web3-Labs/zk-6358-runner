@@ -99,7 +99,7 @@ pub async fn state_only_mocking() {
     // let o_s_line = rl.readline(">>input batch count(one batch 4 txs): ").unwrap();
     // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
 
-    let tx_n = 8;
+    let tx_n = 1;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n).for_each(|_| {

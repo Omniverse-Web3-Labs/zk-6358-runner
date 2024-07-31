@@ -10,12 +10,10 @@ pub mod mock_on {
     use plonky2_ecdsa::curve::{ecdsa::ECDSASecretKey, secp256k1::Secp256K1};
     use rand::{rngs::OsRng, Rng};
     use zk_6358::utils6358::{
-        deploy_tx::{BaseAsset, DeployTransaction}, mint_tx::MintTransaction, transaction::{
+        deploy_tx::{BaseAsset, DeployTransaction}, mint_tx::{self, MintTransaction}, transaction::{
             generate_rand_input, generate_rand_output, GasFeeTransaction, SpendTransaction,
             TransactionInput, TransactionOutput,
-        }, 
-        tx_eip_712::EIP712DataHashing, 
-        utxo::{AMOUNT_LEN, TOKEN_ADDRESS_LEN, USER_ADDRESS_LEN}
+        }, tx_eip_712::EIP712DataHashing, type_utils::ZK6358DataHashing, utxo::{AMOUNT_LEN, TOKEN_ADDRESS_LEN, USER_ADDRESS_LEN}
     };
     use zk_6358_prover::types::{signed_tx_types::SignedOmniverseTx, test_utils::{biguint_to_fixed_bytes_le, do_sign_msg_hash}};
 
@@ -295,7 +293,7 @@ pub mod mock_on {
 
         let mut spend_inputs = Vec::new();
         minted_tx_vec.iter().for_each(|mint_tx| {
-            let utxo_to_be_spent = mint_tx.generate_outputs_utxo::<F>();
+            let utxo_to_be_spent = mint_tx.generate_outputs_utxo::<F>(&<MintTransaction as ZK6358DataHashing<F>>::hash_keccak256(&mint_tx));
 
             let mut inputs = utxo_to_be_spent
                 .iter()
