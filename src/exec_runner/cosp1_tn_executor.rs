@@ -71,9 +71,8 @@ impl CoSP1TestnetExecutor {
 pub async fn state_only_mocking() {
     use crate::mock::mock_utils::mock_on::p_test_generate_a_batch;
     use plonky2_ecdsa::curve::{curve_types::{AffinePoint, CurveScalar, Curve}, ecdsa::{ECDSAPublicKey, ECDSASecretKey}, secp256k1::Secp256K1};
-    use plonky2::field::{secp256k1_scalar::Secp256K1Scalar, types::Sample};
+    use plonky2::{field::{secp256k1_scalar::Secp256K1Scalar, types::Sample}, util::timing::TimingTree};
     use itertools::Itertools;
-    use plonky2::util::timing::TimingTree;
     use log::Level;
 
     type EC = Secp256K1;
@@ -99,6 +98,7 @@ pub async fn state_only_mocking() {
     // let o_s_line = rl.readline(">>input batch count(one batch 4 txs): ").unwrap();
     // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
 
+    let total_timing = TimingTree::new("total processing time.", Level::Info);
     let tx_n = 1;
 
     let mut batched_somtx_vec = Vec::new();
@@ -121,4 +121,5 @@ pub async fn state_only_mocking() {
     timing.print();
 
     cosp1_executor.exec_state_prove_circuit(&batched_somtx_vec).await.expect("mock state proving error");
+    total_timing.print();
 }
