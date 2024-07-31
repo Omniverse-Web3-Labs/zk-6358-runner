@@ -4,7 +4,7 @@ use plonky2::{
     fri::FriConfig, 
     plonk::{circuit_data::CircuitConfig, config::{GenericConfig, PoseidonGoldilocksConfig}}
 };
-use plonky2_ecdsa::gadgets::recursive_proof::recursive_proof_2;
+use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
 use zk_6358::utils6358::transaction::GasFeeTransaction;
 use zk_6358_prover::{circuit::state_prover::ZK6358StateProverEnv, types::signed_tx_types::SignedOmniverseTx};
 
@@ -40,7 +40,7 @@ impl CoSP1TestnetExecutor {
         }
     }
 
-    pub async fn exec_state_prove_circuit(&mut self, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<()> {
+    pub async fn exec_state_prove_circuit(&mut self, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
         let mut rzp_branch = self.runtime_zk_prover.fork();
 
         let middle_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
@@ -56,14 +56,14 @@ impl CoSP1TestnetExecutor {
             ..standard_config
         };
 
-        let _final_proof =
+        let final_proof =
             recursive_proof_2::<F, C, C, D>(&vec![middle_proof], &high_rate_config, None)?;
 
         // remember to flush to db, or the local state will not be updated
         self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
 
-        Ok(())
+        Ok(final_proof)
     }
 }
 
@@ -74,6 +74,7 @@ pub async fn state_only_mocking() {
     use plonky2::{field::{secp256k1_scalar::Secp256K1Scalar, types::Sample}, util::timing::TimingTree};
     use itertools::Itertools;
     use log::Level;
+    use circuit_local_storage::circuit::p_v_io::proof_tuple_to_local;
 
     type EC = Secp256K1;
 
@@ -99,10 +100,10 @@ pub async fn state_only_mocking() {
     // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
 
     let total_timing = TimingTree::new("total processing time.", Level::Info);
-    let tx_n = 4;
+    let tx_n = 256;
 
     let mut batched_somtx_vec = Vec::new();
-    (0..tx_n).for_each(|_| {
+    (0..tx_n / 4).for_each(|_| {
         batched_somtx_vec.append(&mut p_test_generate_a_batch(
             sk,
             x_le_bytes.clone().try_into().unwrap(),
@@ -120,6 +121,9 @@ pub async fn state_only_mocking() {
     cosp1_executor.p_test_init_gas_inputs(&test_gas_tx_vec).await;
     timing.print();
 
-    cosp1_executor.exec_state_prove_circuit(&batched_somtx_vec).await.expect("mock state proving error");
+    let final_proof = cosp1_executor.exec_state_prove_circuit(&batched_somtx_vec).await.expect("mock state proving error");
     total_timing.print();
+
+    proof_tuple_to_local(&format!("{}-tx", tx_n), &final_proof, false).unwrap();
+    proof_tuple_to_local(&format!("{}-tx", tx_n), &final_proof, true).unwrap();
 }
