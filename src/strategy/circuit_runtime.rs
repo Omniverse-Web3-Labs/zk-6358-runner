@@ -26,7 +26,7 @@ pub trait OnlyStateProverCircuitRT<H: Hasher<F> + Send + Sync, F: RichField + Ex
 /////////////////////////////////
 /// implementation for `ZK6358StateProverEnv`
 impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> OnlyStateProverCircuitRT<H, F, D> for ZK6358StateProverEnv<H, F, D> {
-    const CHUNK_SIZE: usize = 4;
+    const CHUNK_SIZE: usize = 16;
 
     async fn state_only_crt_prove<C: GenericConfig<D, F = F>>(
         &mut self,
