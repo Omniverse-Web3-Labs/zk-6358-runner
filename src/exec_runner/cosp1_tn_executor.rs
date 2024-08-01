@@ -42,14 +42,14 @@ impl CoSP1TestnetExecutor {
         }
     }
 
-    pub async fn execute_one_batch(&mut self, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
-        let mut rzp_branch = self.runtime_zk_prover.fork();
+    async fn execute_one_batch(&mut self, batched_somtx_vec: &[SignedOmniverseTx]) -> Result<ProofTuple<F, C, D>> {
+        // let mut rzp_branch = self.runtime_zk_prover.fork();
 
-        let batched_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
+        let batched_proof = self.runtime_zk_prover.state_only_crt_prove::<C>(batched_somtx_vec).await?;
 
         // remember to flush to db, or the local state will not be updated
-        self.runtime_zk_prover.merge(rzp_branch);
-        self.runtime_zk_prover.flush_state_after_final_verification().await;
+        // self.runtime_zk_prover.merge(rzp_branch);
+        // self.runtime_zk_prover.flush_state_after_final_verification().await;
 
         Ok(batched_proof)
     }
@@ -57,13 +57,11 @@ impl CoSP1TestnetExecutor {
     pub async fn exec_state_prove_circuit(&mut self, somtx_container: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
         assert_eq!(somtx_container.len() % Self::BATCH_SIZE, 0, "Invalid `somtx_container` size");
         
-        let mut rzp_branch = self.runtime_zk_prover.fork();
-
         let mut batched_proofs = Vec::new();
         for (i, batched_somtx_vec) in somtx_container.chunks(Self::BATCH_SIZE).enumerate() {
             info!("processing batch: {}", i);
 
-            batched_proofs.push(rzp_branch.state_only_crt_prove::<C>(&batched_somtx_vec).await?);
+            batched_proofs.push(self.execute_one_batch(batched_somtx_vec).await?);
         }
 
         // let middle_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
@@ -89,8 +87,8 @@ impl CoSP1TestnetExecutor {
         let final_proof =
             recursive_proof_2::<F, C, C, D>(&vec![middle_proof], &high_rate_config, None)?;
 
-        // remember to flush to db, or the local state will not be updated
-        self.runtime_zk_prover.merge(rzp_branch);
+        // // remember to flush to db, or the local state will not be updated
+        // self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
 
         Ok(final_proof)
@@ -130,7 +128,7 @@ pub async fn state_only_mocking() {
     // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
 
     let total_timing = TimingTree::new("total processing time.", Level::Info);
-    let tx_n = 128;
+    let tx_n = 1024;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n / 4).for_each(|_| {
