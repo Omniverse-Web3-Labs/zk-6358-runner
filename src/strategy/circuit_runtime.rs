@@ -7,7 +7,7 @@ use plonky2::{
     plonk::{circuit_data::CircuitConfig, config::{AlgebraicHasher, GenericConfig, Hasher}}, util::timing::TimingTree
 };
 use plonky2_ecdsa::gadgets::recursive_proof::ProofTuple;
-use zk_6358_prover::{circuit::{parallel_runtime::{parallel_circuit_data_prove, ParallelRuntimeCircuitEnv}, state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
+use zk_6358_prover::{circuit::{parallel_runtime::{half_parallel_circuit_data_prove, parallel_circuit_data_prove, ParallelRuntimeCircuitEnv}, state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +26,7 @@ pub trait OnlyStateProverCircuitRT<H: Hasher<F> + Send + Sync, F: RichField + Ex
 /////////////////////////////////
 /// implementation for `ZK6358StateProverEnv`
 impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> OnlyStateProverCircuitRT<H, F, D> for ZK6358StateProverEnv<H, F, D> {
-    const CHUNK_SIZE: usize = 16;
+    const CHUNK_SIZE: usize = 4;
 
     async fn state_only_crt_prove<C: GenericConfig<D, F = F>>(
         &mut self,
@@ -40,8 +40,8 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> O
         timing.print();
 
         let timing = TimingTree::new("parallel building and proving state circuit", Level::Info);
-        let chunked_state_proofs =
-            parallel_circuit_data_prove::<H, F, C, D>(parallel_state_cd_vec);
+        // let chunked_state_proofs = parallel_circuit_data_prove::<F, C, D>(parallel_state_cd_vec);
+        let chunked_state_proofs = half_parallel_circuit_data_prove::<F, C, D>(parallel_state_cd_vec);
         timing.print();
 
         let config = CircuitConfig::standard_recursion_config();

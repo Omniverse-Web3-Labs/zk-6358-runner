@@ -100,7 +100,7 @@ pub async fn state_only_mocking() {
     // let tx_n: usize = usize::from_str_radix(&o_s_line, 10).unwrap();
 
     let total_timing = TimingTree::new("total processing time.", Level::Info);
-    let tx_n = 256;
+    let tx_n = 64;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n / 4).for_each(|_| {
