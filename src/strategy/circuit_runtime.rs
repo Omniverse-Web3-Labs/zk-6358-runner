@@ -7,7 +7,7 @@ use plonky2::{
     plonk::{circuit_data::CircuitConfig, config::{AlgebraicHasher, GenericConfig, Hasher}}, util::timing::TimingTree
 };
 use plonky2_ecdsa::gadgets::recursive_proof::ProofTuple;
-use zk_6358_prover::{circuit::{parallel_runtime::{half_parallel_circuit_data_prove, parallel_circuit_data_prove, ParallelRuntimeCircuitEnv}, state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
+use zk_6358_prover::{circuit::{parallel_runtime::{half_parallel_circuit_data_prove, ParallelRuntimeCircuitEnv}, state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -17,7 +17,7 @@ pub trait OnlyStateProverCircuitRT<H: Hasher<F> + Send + Sync, F: RichField + Ex
 
     fn state_only_crt_prove<C: GenericConfig<D, F = F>>(
         &mut self,
-        batched_somtx_vec: &Vec<SignedOmniverseTx>,
+        batched_somtx_vec: &[SignedOmniverseTx],
     ) -> impl core::future::Future<Output = Result<ProofTuple<F, C, D>>>
     where
         <C as GenericConfig<D>>::Hasher: AlgebraicHasher<F>;
@@ -30,7 +30,7 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> O
 
     async fn state_only_crt_prove<C: GenericConfig<D, F = F>>(
         &mut self,
-        batched_somtx_vec: &Vec<SignedOmniverseTx>,
+        batched_somtx_vec: &[SignedOmniverseTx],
     ) -> Result<ProofTuple<F, C, D>>
     where
         <C as GenericConfig<D>>::Hasher: AlgebraicHasher<F> {

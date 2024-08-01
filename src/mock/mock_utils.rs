@@ -10,7 +10,7 @@ pub mod mock_on {
     use plonky2_ecdsa::curve::{ecdsa::ECDSASecretKey, secp256k1::Secp256K1};
     use rand::{rngs::OsRng, Rng};
     use zk_6358::utils6358::{
-        deploy_tx::{BaseAsset, DeployTransaction}, mint_tx::{self, MintTransaction}, transaction::{
+        deploy_tx::{BaseAsset, DeployTransaction}, mint_tx::MintTransaction, transaction::{
             generate_rand_input, generate_rand_output, GasFeeTransaction, SpendTransaction,
             TransactionInput, TransactionOutput,
         }, tx_eip_712::EIP712DataHashing, type_utils::ZK6358DataHashing, utxo::{AMOUNT_LEN, TOKEN_ADDRESS_LEN, USER_ADDRESS_LEN}

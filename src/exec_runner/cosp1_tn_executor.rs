@@ -6,7 +6,7 @@ use plonky2::{
 };
 use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
 use zk_6358::utils6358::transaction::GasFeeTransaction;
-use zk_6358_prover::{circuit::state_prover::ZK6358StateProverEnv, types::signed_tx_types::SignedOmniverseTx};
+use zk_6358_prover::{circuit::{state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
 
 use anyhow::Result;
 
@@ -23,6 +23,8 @@ pub struct CoSP1TestnetExecutor
 }
 
 impl CoSP1TestnetExecutor {
+    const BATCH_SIZE: usize = 128;
+
     pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
 
@@ -40,10 +42,38 @@ impl CoSP1TestnetExecutor {
         }
     }
 
-    pub async fn exec_state_prove_circuit(&mut self, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
+    pub async fn execute_one_batch(&mut self, batched_somtx_vec: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
         let mut rzp_branch = self.runtime_zk_prover.fork();
 
-        let middle_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
+        let batched_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
+
+        // remember to flush to db, or the local state will not be updated
+        self.runtime_zk_prover.merge(rzp_branch);
+        self.runtime_zk_prover.flush_state_after_final_verification().await;
+
+        Ok(batched_proof)
+    }
+
+    pub async fn exec_state_prove_circuit(&mut self, somtx_container: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
+        assert_eq!(somtx_container.len() % Self::BATCH_SIZE, 0, "Invalid `somtx_container` size");
+        
+        let mut rzp_branch = self.runtime_zk_prover.fork();
+
+        let mut batched_proofs = Vec::new();
+        for (i, batched_somtx_vec) in somtx_container.chunks(Self::BATCH_SIZE).enumerate() {
+            info!("processing batch: {}", i);
+
+            batched_proofs.push(rzp_branch.state_only_crt_prove::<C>(&batched_somtx_vec).await?);
+        }
+
+        // let middle_proof = rzp_branch.state_only_crt_prove::<C>(batched_somtx_vec).await?;
+
+        let config = CircuitConfig::standard_recursion_config();
+
+        // to be parallized
+        let middle_proof =
+            zk_6358_chunked_state_recursive_proof(&batched_proofs, &config.clone(), None)
+                .unwrap();
 
         let standard_config = CircuitConfig::standard_recursion_config();
         let high_rate_config = CircuitConfig {
