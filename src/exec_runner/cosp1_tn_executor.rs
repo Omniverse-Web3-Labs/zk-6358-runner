@@ -23,7 +23,7 @@ pub struct CoSP1TestnetExecutor
 }
 
 impl CoSP1TestnetExecutor {
-    const BATCH_SIZE: usize = 128;
+    const BATCH_SIZE: usize = 64;
 
     pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
