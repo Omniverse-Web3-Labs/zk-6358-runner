@@ -1,3 +1,4 @@
+use circuit_local_storage::object_store::{batch_serde::BatchRange, proof_object_store::FRIProofBatchStorage};
 use exec_system::traits::EnvConfig;
 use log::info;
 use plonky2::{
@@ -17,9 +18,14 @@ type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
 type H = <C as GenericConfig<D>>::Hasher;
 
+const TN_FRI_PROOF_PATH: &str = "fri-proof-20240804";
+
 pub struct CoSP1TestnetExecutor
 {
     runtime_zk_prover: ZK6358StateProverEnv<H, F, D>,
+
+    // objective storage
+    fri_proof_exec_store: FRIProofBatchStorage
 }
 
 impl CoSP1TestnetExecutor {
@@ -27,11 +33,14 @@ impl CoSP1TestnetExecutor {
 
     pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
+        let o_s_url_config = exec_system::database::ObjectStoreUrlConfig::from_env();
 
         info!("{:?}", db_config.smt_kv);
+        info!("{:?}", o_s_url_config);
 
         Self { 
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
+            fri_proof_exec_store: FRIProofBatchStorage::new(&o_s_url_config, TN_FRI_PROOF_PATH.to_string()).await
         }
     }
 
@@ -54,7 +63,7 @@ impl CoSP1TestnetExecutor {
         Ok(batched_proof)
     }
 
-    pub async fn exec_state_prove_circuit(&mut self, somtx_container: &Vec<SignedOmniverseTx>) -> Result<ProofTuple<F, C, D>> {
+    pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
         assert_eq!(somtx_container.len() % Self::BATCH_SIZE, 0, "Invalid `somtx_container` size");
         
         let mut batched_proofs = Vec::new();
@@ -91,7 +100,7 @@ impl CoSP1TestnetExecutor {
         // self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
 
-        Ok(final_proof)
+        self.fri_proof_exec_store.put_batched_fri_proof(batch_range, final_proof).await
     }
 }
 
@@ -102,7 +111,6 @@ pub async fn state_only_mocking() {
     use plonky2::{field::{secp256k1_scalar::Secp256K1Scalar, types::Sample}, util::timing::TimingTree};
     use itertools::Itertools;
     use log::Level;
-    use circuit_local_storage::circuit::p_v_io::proof_tuple_to_local;
 
     type EC = Secp256K1;
 
@@ -149,9 +157,12 @@ pub async fn state_only_mocking() {
     cosp1_executor.p_test_init_gas_inputs(&test_gas_tx_vec).await;
     timing.print();
 
-    let final_proof = cosp1_executor.exec_state_prove_circuit(&batched_somtx_vec).await.expect("mock state proving error");
+    let batch_range = BatchRange {
+        start_block_height: 0,
+        start_tx_seq_id: 1,
+        end_block_height: 64,
+        end_tx_seq_id: 1024        
+    };
+    let _final_proof = cosp1_executor.exec_state_prove_circuit(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
     total_timing.print();
-
-    proof_tuple_to_local(&format!("{}-tx", tx_n), &final_proof, false).unwrap();
-    proof_tuple_to_local(&format!("{}-tx", tx_n), &final_proof, true).unwrap();
 }
