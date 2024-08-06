@@ -1,4 +1,4 @@
-use circuit_local_storage::object_store::{batch_serde::BatchRange, proof_object_store::FRIProofBatchStorage};
+use circuit_local_storage::object_store::{batch_serde::{BatchConfig, BatchRange}, proof_object_store::FRIProofBatchStorage};
 use exec_system::traits::EnvConfig;
 use log::info;
 use plonky2::{
@@ -44,6 +44,10 @@ impl CoSP1TestnetExecutor {
         }
     }
 
+    pub fn get_batch_config(&self) -> &BatchConfig {
+        &self.fri_proof_exec_store.batch_config
+    }
+
     #[cfg(feature = "mocktest")]
     pub async fn p_test_init_gas_inputs(&mut self, gas_tx_vec: &Vec<GasFeeTransaction>) {
         for gas_tx in gas_tx_vec.iter() {
@@ -65,7 +69,9 @@ impl CoSP1TestnetExecutor {
 
     pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
         assert_eq!(somtx_container.len() % Self::BATCH_SIZE, 0, "Invalid `somtx_container` size");
-        
+        assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
+        assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
+
         let mut batched_proofs = Vec::new();
         for (i, batched_somtx_vec) in somtx_container.chunks(Self::BATCH_SIZE).enumerate() {
             info!("processing batch: {}", i);
@@ -159,10 +165,10 @@ pub async fn state_only_mocking() {
 
     let batch_range = BatchRange {
         start_block_height: 0,
-        start_tx_seq_id: 1,
+        start_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id,
         end_block_height: 64,
-        end_tx_seq_id: 1024        
+        end_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id + tx_n - 1
     };
-    let _final_proof = cosp1_executor.exec_state_prove_circuit(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
+    cosp1_executor.exec_state_prove_circuit(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
     total_timing.print();
 }
