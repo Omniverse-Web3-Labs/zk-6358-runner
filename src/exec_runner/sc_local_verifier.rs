@@ -57,7 +57,8 @@ impl SCLocalVerifier {
 
     pub fn verify_proof_locally_or_panic(&mut self, proof: &Vec<u8>, instances: &Vec<Fr>) {
         assert!(instances.len() % 4 == 0);
-        let tx_num = instances.len() / 4 - 5;
+        // for state only, the number of the instances is 4 * 4 + 4 * the number of txs
+        let tx_num = instances.len() / 4 - 4;
 
         let vk_address = self.vk_address_map.get(&tx_num).unwrap();
 
