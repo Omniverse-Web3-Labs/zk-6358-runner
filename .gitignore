@@ -8,3 +8,4 @@
 /kv-smt-db
 **/data-circuit
 **/*.log
+**/*.lock
