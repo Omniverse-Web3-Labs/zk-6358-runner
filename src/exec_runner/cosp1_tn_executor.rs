@@ -274,7 +274,7 @@ pub async fn state_only_mocking_kzg() {
     });
 
     let total_timing = TimingTree::new("total processing time.", Level::Info);
-    let tx_n = 4;
+    let tx_n = 256;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n / 4).for_each(|_| {
