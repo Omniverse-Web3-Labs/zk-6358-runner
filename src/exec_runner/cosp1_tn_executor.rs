@@ -136,7 +136,7 @@ impl CoSP1TestnetExecutor {
 
     pub async fn exec_full_to_kzg_proof(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
         assert!(check_log2_strict(somtx_container.len() as u128), "Invalid `somtx_container` size. Not 2^*");
-        assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
+        assert_eq!(batch_range.start_tx_seq_id, self.kzg_proof_batch_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
 
         let mut batched_proofs = Vec::new();
