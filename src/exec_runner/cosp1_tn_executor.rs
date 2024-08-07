@@ -64,8 +64,12 @@ impl CoSP1TestnetExecutor {
         }
     }
 
-    pub fn get_batch_config(&self) -> &BatchConfig {
+    pub fn get_fri_batch_config(&self) -> &BatchConfig {
         &self.fri_proof_exec_store.batch_config
+    }
+
+    pub fn get_kzg_batch_config(&self) -> &BatchConfig {
+        &self.kzg_proof_batch_store.batch_config
     }
 
     #[cfg(feature = "mocktest")]
@@ -240,9 +244,9 @@ pub async fn state_only_mocking() {
 
     let batch_range = BatchRange {
         start_block_height: 0,
-        start_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id,
+        start_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id,
         end_block_height: 64,
-        end_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id + tx_n - 1
+        end_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id + tx_n - 1
     };
     cosp1_executor.exec_state_prove_circuit(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
     total_timing.print();
@@ -297,9 +301,9 @@ pub async fn state_only_mocking_kzg() {
 
     let batch_range = BatchRange {
         start_block_height: 0,
-        start_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id,
+        start_tx_seq_id: cosp1_executor.get_kzg_batch_config().next_tx_seq_id,
         end_block_height: 64,
-        end_tx_seq_id: cosp1_executor.get_batch_config().next_tx_seq_id + tx_n - 1
+        end_tx_seq_id: cosp1_executor.get_kzg_batch_config().next_tx_seq_id + tx_n - 1
     };
     cosp1_executor.exec_full_to_kzg_proof(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
     total_timing.print();
