@@ -277,8 +277,10 @@ pub async fn state_only_mocking_kzg() {
         y_le_bytes.append(&mut i.to_le_bytes().to_vec());
     });
 
+    let runtime_config = exec_system::runtime::RuntimeConfig::from_env();
+
     let total_timing = TimingTree::new("total processing time.", Level::Info);
-    let tx_n = 256;
+    let tx_n = runtime_config.tx_n as u128;
 
     let mut batched_somtx_vec = Vec::new();
     (0..tx_n / 4).for_each(|_| {
