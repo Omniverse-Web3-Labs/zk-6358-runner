@@ -46,7 +46,7 @@ pub struct CoSP1TestnetExecutor
 }
 
 impl CoSP1TestnetExecutor {
-    const BATCH_SIZE: usize = 64;
+    const L2_CHUNK_SIZE: usize = 64;
 
     pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
@@ -93,12 +93,12 @@ impl CoSP1TestnetExecutor {
 
     pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
         assert!(check_log2_strict(somtx_container.len() as u128), "Invalid `somtx_container` size. Not 2^*");
-        assert_eq!(somtx_container.len() % Self::BATCH_SIZE, 0, "Invalid `somtx_container` size");
+        assert_eq!(somtx_container.len() % Self::L2_CHUNK_SIZE, 0, "Invalid `somtx_container` size");
         assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
 
         let mut batched_proofs = Vec::new();
-        for (i, batched_somtx_vec) in somtx_container.chunks(Self::BATCH_SIZE).enumerate() {
+        for (i, batched_somtx_vec) in somtx_container.chunks(Self::L2_CHUNK_SIZE).enumerate() {
             info!("processing batch: {}", i);
 
             batched_proofs.push(self.execute_one_batch(batched_somtx_vec).await?);
@@ -140,7 +140,7 @@ impl CoSP1TestnetExecutor {
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
 
         let mut batched_proofs = Vec::new();
-        for (i, batched_somtx_vec) in somtx_container.chunks(Self::BATCH_SIZE).enumerate() {
+        for (i, batched_somtx_vec) in somtx_container.chunks(Self::L2_CHUNK_SIZE).enumerate() {
             info!("processing batch: {}", i);
 
             batched_proofs.push(self.execute_one_batch(batched_somtx_vec).await?);
