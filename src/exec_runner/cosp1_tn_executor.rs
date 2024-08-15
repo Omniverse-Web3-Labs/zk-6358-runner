@@ -249,7 +249,7 @@ pub async fn state_only_mocking() {
             start_block_height: 0,
             start_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id,
             end_block_height: 64,
-            end_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id + tx_n - 1
+            end_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id + runtime_config.batch_size - 1
         };
         cosp1_executor.exec_state_prove_circuit(batch_range, batched_txs).await.expect("mock state proving error");
     }
