@@ -91,7 +91,7 @@ impl CoSP1TestnetExecutor {
         Ok(batched_proof)
     }
 
-    pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
+    pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &[SignedOmniverseTx]) -> Result<()> {
         assert!(check_log2_strict(somtx_container.len() as u128), "Invalid `somtx_container` size. Not 2^*");
         assert_eq!(somtx_container.len() % Self::L2_CHUNK_SIZE, 0, "Invalid `somtx_container` size");
         assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
@@ -134,7 +134,7 @@ impl CoSP1TestnetExecutor {
         self.fri_proof_exec_store.put_batched_fri_proof(batch_range, final_proof).await
     }
 
-    pub async fn exec_full_to_kzg_proof(&mut self, batch_range: BatchRange, somtx_container: &Vec<SignedOmniverseTx>) -> Result<()> {
+    pub async fn exec_full_to_kzg_proof(&mut self, batch_range: BatchRange, somtx_container: &[SignedOmniverseTx]) -> Result<()> {
         assert!(check_log2_strict(somtx_container.len() as u128), "Invalid `somtx_container` size. Not 2^*");
         assert_eq!(batch_range.start_tx_seq_id, self.kzg_proof_batch_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
@@ -244,13 +244,16 @@ pub async fn state_only_mocking() {
     cosp1_executor.p_test_init_gas_inputs(&test_gas_tx_vec).await;
     timing.print();
 
-    let batch_range = BatchRange {
-        start_block_height: 0,
-        start_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id,
-        end_block_height: 64,
-        end_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id + tx_n - 1
-    };
-    cosp1_executor.exec_state_prove_circuit(batch_range, &batched_somtx_vec).await.expect("mock state proving error");
+    for batched_txs in batched_somtx_vec.chunks(runtime_config.batch_size) {
+        let batch_range = BatchRange {
+            start_block_height: 0,
+            start_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id,
+            end_block_height: 64,
+            end_tx_seq_id: cosp1_executor.get_fri_batch_config().next_tx_seq_id + tx_n - 1
+        };
+        cosp1_executor.exec_state_prove_circuit(batch_range, batched_txs).await.expect("mock state proving error");
+    }
+
     total_timing.print();
 }
 
