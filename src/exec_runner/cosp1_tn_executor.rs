@@ -1,6 +1,8 @@
+use std::fs;
+
 use circuit_local_storage::object_store::{batch_serde::{BatchConfig, BatchRange}, proof_object_store::{FRIProofBatchStorage, KZGProofBatchStorage}};
 use crypto::check_log2_strict;
-use exec_system::traits::EnvConfig;
+use exec_system::{runtime::RuntimeConfig, traits::EnvConfig};
 use fri_kzg_verifier::exec::{fri_2_kzg_solidity::{generate_kzg_proof, generate_kzg_verifier}, kzg_setup::load_kzg_params};
 use halo2_proofs::{halo2curves::bn256::Bn256, poly::kzg::commitment::ParamsKZG};
 use itertools::Itertools;
@@ -12,7 +14,7 @@ use plonky2::{
 };
 use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
 use zk_6358::utils6358::transaction::GasFeeTransaction;
-use zk_6358_prover::{circuit::{state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
+use zk_6358_prover::{circuit::{state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, exec::runtime_types::{InitAsset, InitUTXO}, types::signed_tx_types::SignedOmniverseTx};
 
 use anyhow::Result;
 use colored::Colorize;
@@ -24,11 +26,13 @@ type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
 type H = <C as GenericConfig<D>>::Hasher;
 
-const TN_FRI_PROOF_PATH: &str = "fri-proof-mock-0815";
-const TN_KZG_PROOF_PATH: &str = "kzg-proof-mock-0815";
+const TN_FRI_PROOF_PATH: &str = "fri-cosp1-0815";
+const TN_KZG_PROOF_PATH: &str = "kzg-cosp1-0815";
 
 const DEGREE_TESTNET: u32 = 20;
 
+/////////////////////////////////////////////////////////////
+/// raw executor
 pub struct CoSP1TestnetExecutor
 {
     kzg_params: ParamsKZG<Bn256>,
@@ -42,7 +46,9 @@ pub struct CoSP1TestnetExecutor
     kzg_proof_batch_store: KZGProofBatchStorage,
 
     // local verifier
-    local_verifier: SCLocalVerifier
+    local_verifier: SCLocalVerifier,
+
+    pub runtime_config: RuntimeConfig
 }
 
 impl CoSP1TestnetExecutor {
@@ -51,17 +57,26 @@ impl CoSP1TestnetExecutor {
     pub async fn new() -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
         let o_s_url_config = exec_system::database::ObjectStoreUrlConfig::from_env();
+        let runtime_config = exec_system::runtime::RuntimeConfig::from_env();
 
         info!("{:?}", db_config.smt_kv);
         info!("{:?}", o_s_url_config);
+
+        assert!(check_log2_strict(runtime_config.batch_size as u128), "Invalid `somtx_container` size. Not 2^*");
+        assert_eq!(runtime_config.batch_size % Self::L2_CHUNK_SIZE, 0, "Invalid `somtx_container` size");
 
         Self { 
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
             fri_proof_exec_store: FRIProofBatchStorage::new(&o_s_url_config, TN_FRI_PROOF_PATH.to_string()).await,
             kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config, TN_KZG_PROOF_PATH.to_string()).await,
-            local_verifier: SCLocalVerifier::new(&vec![])
+            local_verifier: SCLocalVerifier::new(&vec![]),
+            runtime_config
         }
+    }
+
+    pub fn batch_size(&self) -> usize {
+        self.runtime_config.batch_size
     }
 
     pub fn get_fri_batch_config(&self) -> &BatchConfig {
@@ -92,8 +107,7 @@ impl CoSP1TestnetExecutor {
     }
 
     pub async fn exec_state_prove_circuit(&mut self, batch_range: BatchRange, somtx_container: &[SignedOmniverseTx]) -> Result<()> {
-        assert!(check_log2_strict(somtx_container.len() as u128), "Invalid `somtx_container` size. Not 2^*");
-        assert_eq!(somtx_container.len() % Self::L2_CHUNK_SIZE, 0, "Invalid `somtx_container` size");
+        assert_eq!(somtx_container.len(), self.runtime_config.batch_size, "Invalid tx count. Expected {}. Got {}", self.runtime_config.batch_size, somtx_container.len());
         assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
 
@@ -193,8 +207,39 @@ impl CoSP1TestnetExecutor {
 
         Ok(())
     }
+
+    fn is_beginning(&self) -> bool {
+        (1 == self.get_kzg_batch_config().next_tx_seq_id) && (1 == self.get_fri_batch_config().next_tx_seq_id)
+    }
+    
+    // load executed batch id from objective storage
+    pub async fn load_current_state_from_local(&mut self, init_path: &str) -> Result<()> {
+        if self.is_beginning() {
+            if let Ok(init_utxo_bytes) = fs::read(format!("{}/init_utxo.json", init_path)) {
+                let init_utxo_vec: Vec<InitUTXO> = serde_json::from_slice(&init_utxo_bytes).unwrap();
+                let init_utxo_vec = init_utxo_vec.iter().map(|init_utxo| {
+                    init_utxo.to_zk6358_utxo().unwrap()
+                }).collect_vec();
+                self.runtime_zk_prover.init_utxo_inputs(&init_utxo_vec).await;
+
+                info!("init utxos");
+            }
+    
+            if let Ok(init_asset_bytes) = fs::read(format!("{}/init_asset.json", init_path)) {
+                let init_asset: InitAsset = serde_json::from_slice(&init_asset_bytes).unwrap();
+                let init_asset = init_asset.to_zk6358_asset().unwrap();
+                self.runtime_zk_prover.init_asset(&init_asset).await;
+
+                info!("init assets");
+            }
+        }
+
+        Ok(())
+    }
 }
 
+/////////////////////////////////////////////////////////////
+/// test
 #[cfg(feature = "mocktest")]
 pub async fn state_only_mocking() {
     use crate::mock::mock_utils::mock_on::p_test_generate_a_batch;
