@@ -13,7 +13,6 @@ use plonky2::{
     field::types::PrimeField64
 };
 use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
-use zk_6358::utils6358::transaction::GasFeeTransaction;
 use zk_6358_prover::{circuit::{state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, exec::runtime_types::{InitAsset, InitUTXO}, types::signed_tx_types::SignedOmniverseTx};
 
 use anyhow::Result;
@@ -85,13 +84,6 @@ impl CoSP1TestnetExecutor {
 
     pub fn get_kzg_batch_config(&self) -> &BatchConfig {
         &self.kzg_proof_batch_store.batch_config
-    }
-
-    #[cfg(feature = "mocktest")]
-    pub async fn p_test_init_gas_inputs(&mut self, gas_tx_vec: &Vec<GasFeeTransaction>) {
-        for gas_tx in gas_tx_vec.iter() {
-            self.runtime_zk_prover.init_utxo_inputs(&gas_tx.generate_inputs_utxo()).await;
-        }
     }
 
     async fn execute_one_batch(&mut self, batched_somtx_vec: &[SignedOmniverseTx]) -> Result<ProofTuple<F, C, D>> {
@@ -241,6 +233,21 @@ impl CoSP1TestnetExecutor {
 /////////////////////////////////////////////////////////////
 /// test
 #[cfg(feature = "mocktest")]
+mod mock_test {
+    use zk_6358::utils6358::transaction::GasFeeTransaction;
+    use super::*;
+
+    impl CoSP1TestnetExecutor {
+        pub async fn p_test_init_gas_inputs(&mut self, gas_tx_vec: &Vec<GasFeeTransaction>) {
+            for gas_tx in gas_tx_vec.iter() {
+                self.runtime_zk_prover.init_utxo_inputs(&gas_tx.generate_inputs_utxo()).await;
+            }
+        }
+    }
+}
+
+/// fri
+#[cfg(feature = "mocktest")]
 pub async fn state_only_mocking() {
     use crate::mock::mock_utils::mock_on::p_test_generate_a_batch;
     use plonky2_ecdsa::curve::{curve_types::{AffinePoint, CurveScalar, Curve}, ecdsa::{ECDSAPublicKey, ECDSASecretKey}, secp256k1::Secp256K1};
@@ -302,6 +309,7 @@ pub async fn state_only_mocking() {
     total_timing.print();
 }
 
+/// kzg
 #[cfg(feature = "mocktest")]
 pub async fn state_only_mocking_kzg() {
     use crate::mock::mock_utils::mock_on::p_test_generate_a_batch;
