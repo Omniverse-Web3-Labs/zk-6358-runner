@@ -1,8 +1,9 @@
 
 use anyhow::{Result, anyhow};
 use circuit_local_storage::object_store::batch_serde::BatchRange;
-use exec_system::traits::EnvConfig;
+use exec_system::{runtime::RuntimeConfig, traits::EnvConfig};
 use interact::exec_data::{remote_exec_db::RemoteExecDB, types::{to_u128, DBStoredExecutedTransaction}};
+use log::info;
 use zk_6358_prover::{exec::db_to_zk::ToSignedOmniverseTx, types::signed_tx_types::SignedOmniverseTx};
 
 use super::cosp1_tn_executor::CoSP1TestnetExecutor;
@@ -79,4 +80,24 @@ impl BatchedStateRuntime {
             end_tx_seq_id,
         }
     }
+}
+
+pub async fn testnet_run_batched_state() {
+    use colored::Colorize;
+    use tokio::time::{sleep, Duration};
+
+    let runtime_config = RuntimeConfig::from_env();
+
+    info!("{}", format!("start batched state {}", runtime_config.network).green().bold());
+
+    let mut runtime_exec = BatchedStateRuntime::new().await;
+    runtime_exec.load_current_state_from_local("./init-data").await.unwrap();
+
+    loop {
+        info!("processing at: {}", chrono::offset::Local::now());
+        match runtime_exec.try_one_batch().await {
+            Ok(_) => { sleep(Duration::from_secs(30)).await; },
+            Err(err) => { info!("{}", format!("{}", err).red().bold()); sleep(Duration::from_secs(300)).await; }
+        }
+    }  
 }
