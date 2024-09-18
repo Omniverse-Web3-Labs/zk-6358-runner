@@ -6,3 +6,6 @@
 /generated-sc
 /.DS_Store
 /kv-smt-db
+**/data-circuit
+**/*.log
+*object-store
