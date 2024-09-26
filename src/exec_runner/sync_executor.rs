@@ -1,6 +1,6 @@
 use std::fs;
 
-use circuit_local_storage::object_store::proof_object_store::KZGProofBatchStorage;
+use circuit_local_storage::object_store::proof_object_store::FRIProofBatchStorage;
 use exec_system::traits::EnvConfig;
 use interact::exec_data::{remote_exec_db::RemoteExecDB, types::{to_u128, DBStoredExecutedTransaction}};
 use itertools::Itertools;
@@ -56,12 +56,12 @@ pub struct SyncExecutor<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>
     remote_db: RemoteExecDB,
     runtime_zk_prover: ZK6358StateProverEnv<H, F, D>,
     // objective storage
-    kzg_proof_batch_store: KZGProofBatchStorage,
+    fri_proof_batch_store: FRIProofBatchStorage,
 }
 
 impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> SyncExecutor<H, F, D> {
 
-    pub async fn new(kzg_batch_path: String) -> Self {
+    pub async fn new(fri_batch_path: String) -> Self {
         let db_config = exec_system::database::DatabaseConfig::from_env();
         let o_s_url_config = exec_system::database::ObjectStoreUrlConfig::from_env();
 
@@ -72,7 +72,7 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> S
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
-            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config, kzg_batch_path).await,
+            fri_proof_batch_store: FRIProofBatchStorage::new(&o_s_url_config, fri_batch_path).await,
         }
     }
 
@@ -105,7 +105,7 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> S
 
     pub async fn synchronize_node<C: GenericConfig<D, F = F>>(&mut self) -> Result<()> {
         // update local `smt-kv` from tx seq `1` to `end_tx_seq - 1`
-        let end_tx_seq = self.kzg_proof_batch_store.batch_config.next_tx_seq_id;
+        let end_tx_seq = self.fri_proof_batch_store.batch_config.next_tx_seq_id;
         info!(" {} transactions to be synchronized", end_tx_seq - 1);
 
         // `tx seq` is started from `1` 

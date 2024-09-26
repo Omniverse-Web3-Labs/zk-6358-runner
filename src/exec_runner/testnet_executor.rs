@@ -33,6 +33,7 @@ use zk_6358_prover::types::signed_tx_types::SignedOmniverseTx;
 use zk_6358_prover::exec::db_to_zk::ToSignedOmniverseTx;
 use zk_6358_prover::exec::runtime_types::{InitAsset, InitUTXO};
 
+use crate::exec_runner::cosp1_tn_executor::{TN_FRI_PROOF_PATH, TN_KZG_PROOF_PATH};
 use crate::exec_runner::sync_executor::SyncExecutor;
 
 use super::sc_local_verifier::SCLocalVerifier;
@@ -45,8 +46,6 @@ use super::sc_local_verifier::SCLocalVerifier;
 
 const TESTNET_CHUNK_SIZE: usize = 4;
 const DEGREE_TESTNET: u32 = 20;
-
-const TN_KZG_BATCH_PATH: &str = "kzg-proof-20240430/";
 
 const D: usize = 2;
 type C = PoseidonGoldilocksConfig;
@@ -80,7 +79,7 @@ impl TestnetExecutor
             // batch_recorder: BatchRecorder { next_batch_id: 0, next_tx_id: 1 }, 
             remote_db: RemoteExecDB::new(&db_config.remote_url).await,
             runtime_zk_prover: ZK6358StateProverEnv::<H, F, D>::new(&db_config.smt_kv).await,
-            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config, TN_KZG_BATCH_PATH.to_string()).await,
+            kzg_proof_batch_store: KZGProofBatchStorage::new(&o_s_url_config, TN_KZG_PROOF_PATH.to_string()).await,
             kzg_params: load_kzg_params(DEGREE_TESTNET, true),
             local_verifier: SCLocalVerifier::new(&vec![4, 8, 16, 32])
         }
@@ -280,8 +279,8 @@ pub async fn run_sync_testnet() {
 
     info!("{}", format!("start {}", runtime_config.network).green().bold());
 
-    let mut runtime_exec = SyncExecutor::<H, F, D>::new(TN_KZG_BATCH_PATH.to_string()).await;
-    runtime_exec.load_current_state_from_local("./test-data").await.unwrap();
+    let mut runtime_exec = SyncExecutor::<H, F, D>::new(TN_FRI_PROOF_PATH.to_string()).await;
+    runtime_exec.load_current_state_from_local("./init-data").await.unwrap();
 
     info!("start syncing at: {}", chrono::offset::Local::now());
     match runtime_exec.synchronize_node::<C>().await {
