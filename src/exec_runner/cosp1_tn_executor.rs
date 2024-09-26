@@ -107,7 +107,7 @@ impl CoSP1TestnetExecutor {
 
         let mut batched_proofs = Vec::new();
         for (i, batched_somtx_vec) in somtx_container.chunks(Self::L2_CHUNK_SIZE).enumerate() {
-            info!("processing l2 chunk: {}", i);
+            info!("processing L2 chunk: {}", i);
 
             batched_proofs.push(self.execute_one_batch(batched_somtx_vec).await?);
         }
