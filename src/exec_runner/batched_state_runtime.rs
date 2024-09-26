@@ -94,7 +94,7 @@ pub async fn testnet_run_batched_state() {
     runtime_exec.load_current_state_from_local("./init-data").await.unwrap();
 
     loop {
-        info!("processing at: {}", chrono::offset::Local::now());
+        info!("{}", format!("processing at: {}", chrono::offset::Local::now()).yellow());
         match runtime_exec.try_one_batch().await {
             Ok(_) => { sleep(Duration::from_secs(30)).await; },
             Err(err) => { info!("{}", format!("{}", err).red().bold()); sleep(Duration::from_secs(300)).await; }

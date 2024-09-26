@@ -103,11 +103,11 @@ impl CoSP1TestnetExecutor {
         assert_eq!(batch_range.start_tx_seq_id, self.fri_proof_exec_store.batch_config.next_tx_seq_id, "Invalid `tx_seq_id`");
         assert_eq!(batch_range.end_tx_seq_id - batch_range.start_tx_seq_id + 1, somtx_container.len() as u128, "Invalid number of the transactions");
 
-        info!("processing batch: {}", self.fri_proof_exec_store.batch_config.next_batch_id);
+        info!("{}", format!("processing batch: {}", self.fri_proof_exec_store.batch_config.next_batch_id).blue().bold());
 
         let mut batched_proofs = Vec::new();
         for (i, batched_somtx_vec) in somtx_container.chunks(Self::L2_CHUNK_SIZE).enumerate() {
-            info!("processing L2 chunk: {}", i);
+            info!("{}", format!("processing L2 chunk: {}", i).cyan().bold());
 
             batched_proofs.push(self.execute_one_batch(batched_somtx_vec).await?);
         }
