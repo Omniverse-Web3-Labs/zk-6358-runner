@@ -25,8 +25,8 @@ type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
 type H = <C as GenericConfig<D>>::Hasher;
 
-pub(crate) const TN_FRI_PROOF_PATH: &str = "fri-cosp1-0924";
-pub(crate) const TN_KZG_PROOF_PATH: &str = "kzg-cosp1-0924";
+pub(crate) const TN_FRI_PROOF_PATH: &str = "fri-cosp1-0929";
+pub(crate) const TN_KZG_PROOF_PATH: &str = "kzg-cosp1-0929";
 
 const DEGREE_TESTNET: u32 = 20;
 
