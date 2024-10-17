@@ -72,3 +72,11 @@ rustup override set nightly
         - `swapon /mnt/swap`
     - reset
         - `swapoff -a`
+
+## Tests
+
+```sh
+
+cargo test -r --lib -- mock::mock_test::tests
+
+```
