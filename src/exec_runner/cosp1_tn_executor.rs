@@ -9,7 +9,7 @@ use itertools::Itertools;
 use log::info;
 use plonky2::{
     fri::FriConfig, 
-    plonk::{circuit_data::CircuitConfig, config::{GenericConfig, PoseidonGoldilocksConfig, GenericHashOut}},
+    plonk::{circuit_data::CircuitConfig, config::{GenericConfig, PoseidonGoldilocksConfig}},
     field::types::PrimeField64
 };
 use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
@@ -95,7 +95,7 @@ impl CoSP1TestnetExecutor {
         // self.runtime_zk_prover.merge(rzp_branch);
         // self.runtime_zk_prover.flush_state_after_final_verification().await;
 
-        info!("L2: circuit digest: {:?}", batched_proof.1.circuit_digest.to_vec());
+        // info!("L2: circuit digest: {:?}", batched_proof.1.circuit_digest.to_vec());
 
         Ok(batched_proof)
     }

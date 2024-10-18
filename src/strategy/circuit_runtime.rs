@@ -1,10 +1,10 @@
 use anyhow::Result;
 
-use log::{info, Level};
+use log::Level;
 use plonky2::{
     field::extension::Extendable, 
     hash::hash_types::RichField, 
-    plonk::{circuit_data::CircuitConfig, config::{AlgebraicHasher, GenericConfig, GenericHashOut, Hasher}}, util::timing::TimingTree
+    plonk::{circuit_data::CircuitConfig, config::{AlgebraicHasher, GenericConfig, Hasher}}, util::timing::TimingTree
 };
 use plonky2_ecdsa::gadgets::recursive_proof::ProofTuple;
 use zk_6358_prover::{circuit::{parallel_runtime::{half_parallel_circuit_data_prove, ParallelRuntimeCircuitEnv}, state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, types::signed_tx_types::SignedOmniverseTx};
@@ -44,9 +44,9 @@ impl<H: Hasher<F> + Send + Sync, F: RichField + Extendable<D>, const D: usize> O
         let chunked_state_proofs = half_parallel_circuit_data_prove::<F, C, D>(parallel_state_cd_vec);
         timing.print();
 
-        chunked_state_proofs.iter().for_each(|one_chunk| {
-            info!("L1: the circuit digest: {:?}", one_chunk.1.circuit_digest.to_vec());
-        });
+        // chunked_state_proofs.iter().for_each(|one_chunk| {
+        //     info!("L1: the circuit digest: {:?}", one_chunk.1.circuit_digest.to_vec());
+        // });
 
         let config = CircuitConfig::standard_recursion_config();
 
