@@ -280,7 +280,7 @@ pub async fn run_sync_testnet() {
     info!("{}", format!("start {}", runtime_config.network).green().bold());
 
     let mut runtime_exec = SyncExecutor::<H, F, D>::new(TN_FRI_PROOF_PATH.to_string()).await;
-    runtime_exec.load_current_state_from_local("./init-data").await.unwrap();
+    runtime_exec.load_current_state_from_local("./p-init-data").await.unwrap();
 
     info!("start syncing at: {}", chrono::offset::Local::now());
     match runtime_exec.synchronize_node::<C>().await {

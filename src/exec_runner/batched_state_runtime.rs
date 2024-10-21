@@ -91,7 +91,7 @@ pub async fn testnet_run_batched_state() {
     info!("{}", format!("start batched state {}", runtime_config.network).green().bold());
 
     let mut runtime_exec = BatchedStateRuntime::new().await;
-    runtime_exec.load_current_state_from_local("./init-data").await.unwrap();
+    runtime_exec.load_current_state_from_local("./p-init-data").await.unwrap();
 
     loop {
         info!("{}", format!("processing at: {}", chrono::offset::Local::now()).yellow());
