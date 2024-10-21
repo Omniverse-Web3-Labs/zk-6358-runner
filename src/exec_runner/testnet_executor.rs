@@ -250,8 +250,6 @@ impl TestnetExecutor
 pub async fn run_testnet() {
     // rayon::ThreadPoolBuilder::new().num_threads(8).build_global().unwrap();
 
-    exec_system::initiallize::sys_env_init("./.config/sys.config");
-
     let runtime_config = RuntimeConfig::from_env();
 
     info!("{}", format!("start {}", runtime_config.network).green().bold());
@@ -272,8 +270,6 @@ pub async fn run_testnet() {
 /// run sync
 pub async fn run_sync_testnet() {
     // rayon::ThreadPoolBuilder::new().num_threads(8).build_global().unwrap();
-
-    exec_system::initiallize::sys_env_init("./.config/sys.config");
 
     let runtime_config = RuntimeConfig::from_env();
 
