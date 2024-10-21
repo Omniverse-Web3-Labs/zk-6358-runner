@@ -24,7 +24,7 @@ pub struct Cli {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    exec_system::initiallize::sys_env_init("./.config/sys.config");
+    exec_system::initiallize::sys_env_init("./.config/p-sys.config");
     exec_system::initiallize::sys_log_init(Some(vec!["zk_6358_runner".to_string(), 
         "zk_6358_prover".to_string(), 
         "cached_smt_db".to_string(),
