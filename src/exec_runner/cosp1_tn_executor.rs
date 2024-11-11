@@ -8,9 +8,7 @@ use halo2_proofs::{halo2curves::bn256::Bn256, poly::kzg::commitment::ParamsKZG};
 use itertools::Itertools;
 use log::info;
 use plonky2::{
-    fri::FriConfig, 
-    plonk::{circuit_data::CircuitConfig, config::{GenericConfig, PoseidonGoldilocksConfig}},
-    field::types::PrimeField64
+    field::types::PrimeField64, fri::FriConfig, plonk::{circuit_data::CircuitConfig, config::{GenericConfig, GenericHashOut, PoseidonGoldilocksConfig}}
 };
 use plonky2_ecdsa::gadgets::recursive_proof::{recursive_proof_2, ProofTuple};
 use zk_6358_prover::{circuit::{state_prover::ZK6358StateProverEnv, zk6358_recursive_proof::zk_6358_chunked_state_recursive_proof}, exec::runtime_types::{InitAsset, InitUTXO}, types::signed_tx_types::SignedOmniverseTx};
@@ -25,8 +23,8 @@ type C = PoseidonGoldilocksConfig;
 type F = <C as GenericConfig<D>>::F;
 type H = <C as GenericConfig<D>>::Hasher;
 
-pub(crate) const TN_FRI_PROOF_PATH: &str = "p-1021-fri-cosp1";
-pub(crate) const TN_KZG_PROOF_PATH: &str = "p-1021-kzg-cosp1";
+pub(crate) const TN_FRI_PROOF_PATH: &str = "g-1108-fri-cosp1";
+pub(crate) const TN_KZG_PROOF_PATH: &str = "g-1108-kzg-cosp1";
 
 const DEGREE_TESTNET: u32 = 20;
 
@@ -140,6 +138,8 @@ impl CoSP1TestnetExecutor {
         // // remember to flush to db, or the local state will not be updated
         // self.runtime_zk_prover.merge(rzp_branch);
         self.runtime_zk_prover.flush_state_after_final_verification().await;
+
+        info!("{}", format!("The circuit digest of the p2 final proof is: {:?}", final_proof.1.circuit_digest.to_bytes()).green().bold());
 
         self.fri_proof_exec_store.put_batched_fri_proof(batch_range, final_proof).await
     }
