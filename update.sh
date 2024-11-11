@@ -21,13 +21,11 @@ cd ..
 # clone zk-6358 and executor
 cd zk-omni-executor
 git checkout gas
-git branch
 git pull
 cd ..
 
 cd zk-6358
 git checkout gas
-git branch
 git pull
 cd ..
 
